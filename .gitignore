@@ -5,6 +5,7 @@
 /c/*
 /diffs/*
 /build/*.log
+.dub
 *.a
 *.c
 *.dat
@@ -13,7 +14,6 @@
 *.7z
 *.di
 *.cpp
-*.dat
 *.log
 *.lib
 *.dll
@@ -28,3 +28,7 @@
 *.gui
 *.pdb
 *.zip
+/.dlangidews
+/.dlangidews.wssettings
+/dchip.settings
+/bin/
