@@ -21,7 +21,7 @@
  */
 module demo.types;
 
-import glad.gl.all;
+import derelict.opengl3.types;
 
 import demo.dchip;
 

@@ -1,0 +1,7 @@
+/dchip:demo.settings
+.dub
+.dlangidews*
+dub.selections.json
+demo.settings
+/.dub
+/.dub/dub.json

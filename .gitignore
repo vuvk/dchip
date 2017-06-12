@@ -32,3 +32,5 @@
 /.dlangidews.wssettings
 /dchip.settings
 /bin/
+/examples/demo/.dub
+/examples/demo/.dub/dub.json

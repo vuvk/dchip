@@ -37,7 +37,8 @@ import core.stdc.config;
 import core.stdc.stdlib;
 import core.stdc.string;
 
-import glad.gl.all;
+import derelict.opengl3.gl;
+import derelict.opengl3.types;
 
 import demo.dchip;
 
@@ -145,10 +146,14 @@ void ChipmunkDebugDrawInit()
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    mixin(SET_ATTRIBUTE("program", "Vertex", "vertex", "GL_FLOAT"));
+    /*mixin(SET_ATTRIBUTE("program", "Vertex", "vertex", "GL_FLOAT"));
     mixin(SET_ATTRIBUTE("program", "Vertex", "aa_coord", "GL_FLOAT"));
     mixin(SET_ATTRIBUTE("program", "Vertex", "fill_color", "GL_FLOAT"));
-    mixin(SET_ATTRIBUTE("program", "Vertex", "outline_color", "GL_FLOAT"));
+    mixin(SET_ATTRIBUTE("program", "Vertex", "outline_color", "GL_FLOAT"));*/
+	SET_ATTRIBUTE("program", "Vertex", "vertex", "GL_FLOAT");
+    SET_ATTRIBUTE("program", "Vertex", "aa_coord", "GL_FLOAT");
+    SET_ATTRIBUTE("program", "Vertex", "fill_color", "GL_FLOAT");
+    SET_ATTRIBUTE("program", "Vertex", "outline_color", "GL_FLOAT");
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 

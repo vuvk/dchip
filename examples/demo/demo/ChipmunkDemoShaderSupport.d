@@ -29,8 +29,8 @@ import std.string;
 
 import demo.dchip;
 
-import glad.gl.all;
-import glad.gl.loader;
+import derelict.opengl3.gl;
+import derelict.opengl3.types;
 
 string SET_ATTRIBUTE(string program, string type, string name, string gltype)
 {
@@ -83,8 +83,8 @@ void CheckGLErrors()
     }
 }
 
-alias PFNGLGETSHADERIVPROC = fp_glGetShaderiv;
-alias PFNGLGETSHADERINFOLOGPROC = fp_glGetProgramInfoLog;
+alias PFNGLGETSHADERIVPROC = extern (C) void function( GLuint,GLenum,GLint* ) nothrow @nogc;
+alias PFNGLGETSHADERINFOLOGPROC = extern (C) void function( GLuint,GLsizei,GLsizei*,GLchar* ) nothrow @nogc;
 
 //typedef GLAPIENTRY void (*GETIV)(GLuint shader, GLenum pname, GLint *params);
 //typedef GLAPIENTRY void (*GETINFOLOG)(GLuint shader, GLsizei maxLength, GLsizei *length, GLchar *infoLog);

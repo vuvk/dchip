@@ -21,15 +21,16 @@
     "targetType": "executable",
 
     "sourcePaths": [
-        "."
+        ".",
+		"../../src"
     ],
 
     "dependencies": {
         "dchip": {"path": "../../", "version": "~master"},
-        "glad-drey": ">=0.0.2",
-        "glfw-drey": ">=0.0.4",
-        "glwtf-drey": ">=0.0.1",
+		"derelict-gl3" : "1.0.23",
+		"derelict-sdl2" : "2.0.0",
     },
+	
 
     "versions": [
         "gl3n",

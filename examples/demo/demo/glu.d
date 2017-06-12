@@ -19,8 +19,8 @@ import std.string;
 
 alias stderr = std.stdio.stderr;
 
-import glad.gl.all;
-import glad.gl.loader;
+import derelict.opengl3.gl;
+import derelict.opengl3.types;
 
 /*
 ** Make m an identity matrix

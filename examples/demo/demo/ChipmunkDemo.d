@@ -32,13 +32,10 @@ import std.string;
 
 alias stderr = std.stdio.stderr;
 
-import glad.gl.all;
-import glad.gl.loader;
-
-import glwtf.input;
-import glwtf.window;
-
-import deimos.glfw.glfw3;
+import derelict.opengl3.gl;
+import derelict.opengl3.types;
+import derelict.sdl2.sdl;
+import derelict.sdl2.types;
 
 import demo.dchip;
 
@@ -110,7 +107,9 @@ alias ChipmunkDemoUpdateFunc = void function(cpSpace* space, double dt);
 alias ChipmunkDemoDrawFunc = void function(cpSpace* space);
 alias ChipmunkDemoDestroyFunc = void function(cpSpace* space);
 
-__gshared GLFWwindow* window;
+__gshared SDL_Window* 	sdlWindow;
+__gshared SDL_GLContext glContext;
+__gshared SDL_Event 	sdlEvent;
 
 struct ChipmunkDemo
 {
@@ -151,7 +150,7 @@ cpBool step   = cpFalse;
 cpSpace* space;
 
 double Accumulator = 0.0;
-double LastTime    = 0.0;
+ulong LastTime = 0;
 int ChipmunkDemoTicks = 0;
 double ChipmunkDemoTime = 0;
 
@@ -221,8 +220,8 @@ void ChipmunkDemoDefaultDrawImpl(cpSpace* space)
 void DrawInstructions()
 {
     ChipmunkDemoTextDrawString(cpv(-300, 220),
-                               "Controls:\n"
-                               "A - * Switch demos. (return restarts)\n"
+                               "Controls:\n" ~
+                               "A - * Switch demos. (return restarts)\n" ~
                                "Use the mouse to grab objects.\n"
                                );
 }
@@ -247,10 +246,10 @@ void DrawInfo()
 
     char[1024] buffer = 0;
     string format =
-        "Arbiters: %d (%d) - "
-        "Contact Points: %d (%d)\n"
-        "Other Constraints: %d, Iterations: %d\n"
-        "Constraints x Iterations: %d (%d)\n"
+        "Arbiters: %d (%d) - " ~
+        "Contact Points: %d (%d)\n" ~
+        "Other Constraints: %d, Iterations: %d\n" ~
+        "Constraints x Iterations: %d (%d)\n" ~
         "Time:% 5.2fs, KE:% 5.2e\0";
 
     cpArray* bodies = space.bodies;
@@ -316,9 +315,9 @@ void Tick(double dt)
 
 void Update()
 {
-    double time = glfwGetTime();
-    double dt   = time - LastTime;
-
+   	ulong now  = SDL_GetPerformanceCounter();
+	double dt = (now - LastTime) / cast(double)SDL_GetPerformanceFrequency();
+		
     if (dt > 0.2)
         dt = 0.2;
 
@@ -329,11 +328,17 @@ void Update()
         Tick(fixed_dt);
     }
 
-    LastTime = time;
+    LastTime = now;
 }
 
 void Display()
-{
+{	
+	/*
+		why you not drawing?!
+	*/
+	
+	Reshape (640, 480);
+
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslatef(cast(GLfloat)translate.x, cast(GLfloat)translate.y, 0.0f);
@@ -371,12 +376,12 @@ void Display()
         ChipmunkDemoTextPopRenderer();
     }
     glPopMatrix();
-
-    glfwSwapBuffers(window);
+	
+	SDL_GL_SwapWindow (sdlWindow);
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-extern(C) void Reshape(GLFWwindow* window, int width, int height)
+void Reshape (int width, int height)
 {
     glViewport(0, 0, width, height);
 
@@ -409,7 +414,7 @@ void RunDemo(size_t index)
     ChipmunkDemoTicks = 0;
     ChipmunkDemoTime  = 0.0;
     Accumulator       = 0.0;
-    LastTime = glfwGetTime();
+	LastTime = SDL_GetPerformanceCounter();
 
     mouse_joint = null;
     ChipmunkDemoMessageString = "\0".dup;
@@ -418,13 +423,18 @@ void RunDemo(size_t index)
     max_constraints = 0;
     space = demos[demo_index].initFunc();
 
-    enforce(window !is null);
-    glfwSetWindowTitle(window, DemoTitle(index).toStringz);
+    enforce(sdlWindow !is null);
+    
+	SDL_SetWindowTitle (sdlWindow, DemoTitle(index).toStringz);
 }
 
-extern(C) void Keyboard(GLFWwindow* window, int key, int scancode, int state, int modifier)
+void Keyboard (int key, int scancode, int state, int modifier)
 {
-    if (state != GLFW_REPEAT)  // we ignore repeat
+	/*
+		OLD keyboard input from version with glfw
+	*/
+
+    /*if (state != GLFW_REPEAT)  // we ignore repeat
     switch (key)
     {
         case GLFW_KEY_UP:
@@ -512,7 +522,7 @@ extern(C) void Keyboard(GLFWwindow* window, int key, int scancode, int state, in
     else if (key == '9')
     {
         scale *= scale_increment;
-    }
+    }*/
 }
 
 cpVect MouseToSpace(double x, double y)
@@ -527,7 +537,7 @@ cpVect MouseToSpace(double x, double y)
     glGetIntegerv(GL_VIEWPORT, view.ptr);
 
     int ww, wh;
-    glfwGetWindowSize(window, &ww, &wh);
+	SDL_GetWindowSize (sdlWindow, &ww, &wh);
 
     GLdouble mx = 0, my = 0, mz = 0;
     gluUnProject(x, wh - y, 0.0f, model, proj, view, &mx, &my, &mz);
@@ -535,14 +545,18 @@ cpVect MouseToSpace(double x, double y)
     return cpv(mx, my);
 }
 
-extern(C) void Mouse(GLFWwindow* window, double x, double y)
+void Mouse(double x, double y)
 {
     ChipmunkDemoMouse = MouseToSpace(x, y);
 }
 
-extern(C) void Click(GLFWwindow* window, int button, int state, int mods)
+void Click(int button, int state, int mods)
 {
-    if (button == GLFW_MOUSE_BUTTON_1)
+	/*
+		OLD mouse input from version with glfw
+	*/
+	
+    /*if (button == GLFW_MOUSE_BUTTON_1)
     {
         if (state == GLFW_PRESS)
         {
@@ -567,13 +581,7 @@ extern(C) void Click(GLFWwindow* window, int button, int state, int mods)
     else if (button == GLFW_MOUSE_BUTTON_2)
     {
         ChipmunkDemoRightDown = ChipmunkDemoRightClick = (state == GLFW_PRESS);
-    }
-}
-
-extern(C) void WindowClose(GLFWwindow* window)
-{
-    glfwTerminate();
-    glfwSetWindowShouldClose(window, true);
+    }*/
 }
 
 void SetupGL()
@@ -594,44 +602,6 @@ void SetupGL()
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void TimeTrial(int index, int count)
-{
-    space = demos[index].initFunc();
-
-    double start_time = glfwGetTime();
-    double dt         = demos[index].timestep;
-
-    for (int i = 0; i < count; i++)
-        demos[index].updateFunc(space, dt);
-
-    double end_time = glfwGetTime();
-
-    demos[index].destroyFunc(space);
-
-    printf("Time(%c) = %8.2f ms (%s)\n", index + 'a', (end_time - start_time) * 1e3f, demos[index].name.toStringz);
-}
-
-enum WindowMode
-{
-    fullscreen,
-    windowed,
-}
-
-/* Wrapper around the glwtf API. */
-Window createWindow(string windowName, WindowMode windowMode, int width, int height)
-{
-    auto window = new Window();
-    auto monitor = windowMode == WindowMode.fullscreen ? glfwGetPrimaryMonitor() : null;
-    bool forward_compat = false;
-    auto cv = window.create_highest_available_context(width, height, windowName, monitor, null, GLFW_OPENGL_COMPAT_PROFILE, forward_compat);
-    return window;
-}
-
-void on_glfw_error(int code, string msg)
-{
-    stderr.writefln("Error (%s): %s", code, msg);
-}
-
 int main(string[] args)
 {
     GC.disable();
@@ -641,7 +611,6 @@ int main(string[] args)
     // Segment/segment collisions need to be explicitly enabled currently.
     // This will becoume enabled by default in future versions of Chipmunk.
     cpEnableSegmentToSegmentCollisions();
-
     demos      = demo_list.ptr;
     demo_count = demo_list.length;
     int trial = 0;
@@ -653,74 +622,92 @@ int main(string[] args)
             demos      = cast(ChipmunkDemo*)bench_list.ptr;
             demo_count = bench_count;
         }
-        else
-        if (arg == "-trial")
-        {
-            trial = 1;
-        }
     }
 
-    if (trial)
+    mouse_body = cpBodyNew(INFINITY, INFINITY);
+
+	// initialize SDL2
+	DerelictSDL2.load();
+		
+	SDL_Init (SDL_INIT_EVERYTHING);
+
+    int width = 640;
+    int height = 480;
+	
+	sdlWindow = SDL_CreateWindow ("Hello World", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+	
+    // Make the window's context current
+	DerelictGL.load();
+	glContext = SDL_GL_CreateContext (sdlWindow);
+
+    // Load all OpenGL functions
+	GLVersion glVersion = DerelictGL.reload();
+
+    // Support only GL 3x+
+	writefln("OpenGL version available - %d", glVersion);
+	enforce(glVersion >= 30);
+		
+    SetupGL();
+
+    RunDemo(demo_index);
+
+    /* Loop until the user closes the window */
+	cpBool quit = false;
+	while (!quit)
     {
-        cpAssertHard(glfwInit(), "Error initializing GLFW.");
+        /* Poll for and process events */
+        SDL_PumpEvents();
+		
+        while (SDL_PollEvent (&sdlEvent))
+		{
+			switch (sdlEvent.type)
+			{
+				case SDL_QUIT :
+				{
+					quit = true;
+					continue;	
+				}	
+				
+				/*
+					see Keyboard func for adding input manipulations, friends
+				*/
+				case SDL_KEYDOWN :
+				{
+					int key = sdlEvent.key.keysym.sym;
+					int index = key - SDLK_a;
 
-        //		sleep(1);
-        for (int i = 0; i < demo_count; i++)
-            TimeTrial(i, 1000);
+    				if (0 <= index && index < demo_count)
+    				{
+        				demos[demo_index].destroyFunc(space);
+        				RunDemo(index);
+   					}
+    				else					
+						switch (key)
+						{
+							case SDLK_ESCAPE:
+							{
+								quit = true;
+								continue;	
+							}					
+						
+						
+							default : break;
+						}
+				
+					break;	
+				}
+				
+				default : break;
+			}	
+		}
 
-        //		time_trial('d' - 'a', 10000);
-        return 0;
+        /* Render here */
+        Display();		
     }
-    else
-    {
-        mouse_body = cpBodyNew(INFINITY, INFINITY);
-
-        // initialize glwf
-        auto res = glfwInit();
-        enforce(res, format("glfwInit call failed with return code: '%s'", res));
-        scope(exit)
-            glfwTerminate();
-
-        int width = 640;
-        int height = 480;
-
-        window = enforce(createWindow("Hello World", WindowMode.windowed, width, height).window,
-                         "glfwCreateWindow call failed.");
-
-        register_glfw_error_callback(&on_glfw_error);
-
-        // Make the window's context current
-        glfwMakeContextCurrent(window);
-
-        // Load all OpenGL function pointers via glad.
-        enforce(gladLoadGL());
-
-        // Support only GL 3x+
-        enforce(GLVersion.major >= 3);
-
-        SetupGL();
-
-        // glfw3 doesn't want to automatically do this the first time the window is shown
-        Reshape(window, 640, 480);
-
-        glfwSetWindowSizeCallback(window, &Reshape);
-        glfwSetKeyCallback(window, &Keyboard);
-
-        glfwSetCursorPosCallback(window, &Mouse);
-        glfwSetMouseButtonCallback(window, &Click);
-
-        RunDemo(demo_index);
-
-        /* Loop until the user closes the window */
-        while (!glfwWindowShouldClose(window))
-        {
-            /* Poll for and process events */
-            glfwPollEvents();
-
-            /* Render here */
-            Display();
-        }
-    }
+	
+	SDL_GL_DeleteContext (glContext);
+	SDL_DestroyWindow (sdlWindow);
+	SDL_Quit();
 
     return 0;
 }

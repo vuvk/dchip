@@ -23,7 +23,8 @@ module demo.ChipmunkDemoTextSupport;
 
 import core.stdc.stdlib;
 
-import glad.gl.all;
+import derelict.opengl3.gl;
+import derelict.opengl3.types;
 
 import demo.dchip;
 
