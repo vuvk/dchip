@@ -241,21 +241,13 @@ struct cpPolyShape {
 };*/
 
 
-/// @private
-// TODO : DELETE
-/*struct cpConstraintClass
-{
-    cpConstraintPreStepImpl preStep;
-    cpConstraintApplyCachedImpulseImpl applyCachedImpulse;
-    cpConstraintApplyImpulseImpl applyImpulse;
-    cpConstraintGetImpulseImpl getImpulse;
-}*/
 
 alias cpConstraintPreStepImpl = void function(cpConstraint* constraint, cpFloat dt);
 alias cpConstraintApplyCachedImpulseImpl = void function(cpConstraint* constraint, cpFloat dt_coef);
 alias cpConstraintApplyImpulseImpl = void function(cpConstraint* constraint, cpFloat dt);
 alias cpConstraintGetImpulseImpl = cpFloat function(cpConstraint* constraint);
-
+
+/// @private
 struct cpConstraintClass
 {
     cpConstraintPreStepImpl preStep;
@@ -391,21 +383,25 @@ struct cpGrooveJoint
 	cpVect n;
 	
 	cpFloat jAcc;
-};
-
-struct cpDampedRotarySpring {
-	cpConstraint constraint;
-	cpFloat restAngle;
-	cpFloat stiffness;
-	cpFloat damping;
-	cpDampedRotarySpringTorqueFunc springTorqueFunc;
-	
-	cpFloat target_wrn;
-	cpFloat w_coef;
-	
-	cpFloat iSum;
-	cpFloat jAcc;
 };*/
+
+/// Function type used for damped rotary spring force callbacks.
+alias cpDampedRotarySpringTorqueFunc = cpFloat function(cpConstraint* spring, cpFloat relativeAngle);
+
+struct cpDampedRotarySpring
+{
+    cpConstraint constraint;
+    cpFloat restAngle = 0;
+    cpFloat stiffness = 0;
+    cpFloat damping = 0;
+    cpDampedRotarySpringTorqueFunc springTorqueFunc;
+
+    cpFloat target_wrn = 0;
+    cpFloat w_coef = 0;
+
+    cpFloat iSum = 0;
+    cpFloat jAcc = 0;
+}
 
 struct cpRotaryLimitJoint
 {

@@ -25,16 +25,15 @@ import std.string;
 
 import dchip.constraints_util;
 import dchip.chipmunk;
-import dchip.cpBody;
-import dchip.cpConstraint;
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
-
-alias cpDampedRotarySpringTorqueFunc = cpFloat function(cpConstraint* spring, cpFloat relativeAngle);
+import dchip.cpBody;
+import dchip.cpConstraint;
 
 //~ const cpConstraintClass* cpDampedRotarySpringGetClass();
 
 /// @private
+/* TODO : DELETE
 struct cpDampedRotarySpring
 {
     cpConstraint constraint;
@@ -50,19 +49,11 @@ struct cpDampedRotarySpring
     cpFloat jAcc = 0;
 }
 
-/// Allocate a damped rotary spring.
-cpDampedRotarySpring* cpDampedRotarySpringAlloc();
-
-/// Initialize a damped rotary spring.
-cpDampedRotarySpring* cpDampedRotarySpringInit(cpDampedRotarySpring* joint, cpBody* a, cpBody* b, cpFloat restAngle, cpFloat stiffness, cpFloat damping);
-
-/// Allocate and initialize a damped rotary spring.
-cpConstraint* cpDampedRotarySpringNew(cpBody* a, cpBody* b, cpFloat restAngle, cpFloat stiffness, cpFloat damping);
-
 mixin CP_DefineConstraintProperty!("cpDampedRotarySpring", cpFloat, "restAngle", "RestAngle");
 mixin CP_DefineConstraintProperty!("cpDampedRotarySpring", cpFloat, "stiffness", "Stiffness");
 mixin CP_DefineConstraintProperty!("cpDampedRotarySpring", cpFloat, "damping", "Damping");
 mixin CP_DefineConstraintProperty!("cpDampedRotarySpring", cpDampedRotarySpringTorqueFunc, "springTorqueFunc", "SpringTorqueFunc");
+*/
 
 cpFloat defaultSpringTorque(cpDampedRotarySpring* spring, cpFloat relativeAngle)
 {
@@ -119,8 +110,14 @@ cpFloat getImpulse(cpDampedRotarySpring* spring)
     return spring.jAcc;
 }
 
-__gshared cpConstraintClass klass;
+__gshared cpConstraintClass klass = cpConstraintClass(
+        cast(cpConstraintPreStepImpl)&preStep,
+        cast(cpConstraintApplyCachedImpulseImpl)&applyCachedImpulse,
+        cast(cpConstraintApplyImpulseImpl)&applyImpulse,
+        cast(cpConstraintGetImpulseImpl)&getImpulse,
+    );
 
+/* TODO : DELETE
 void _initModuleCtor_cpDampedRotarySpring()
 {
     klass = cpConstraintClass(
@@ -134,14 +131,15 @@ void _initModuleCtor_cpDampedRotarySpring()
 const(cpConstraintClass *) cpDampedRotarySpringGetClass()
 {
     return cast(cpConstraintClass*)&klass;
-}
+}*/
 
-cpDampedRotarySpring *
-cpDampedRotarySpringAlloc()
+/// Allocate a damped rotary spring.
+cpDampedRotarySpring* cpDampedRotarySpringAlloc()
 {
     return cast(cpDampedRotarySpring*)cpcalloc(1, cpDampedRotarySpring.sizeof);
 }
 
+/// Initialize a damped rotary spring.
 cpDampedRotarySpring* cpDampedRotarySpringInit(cpDampedRotarySpring* spring, cpBody* a, cpBody* b, cpFloat restAngle, cpFloat stiffness, cpFloat damping)
 {
     cpConstraintInit(cast(cpConstraint*)spring, &klass, a, b);
@@ -156,7 +154,74 @@ cpDampedRotarySpring* cpDampedRotarySpringInit(cpDampedRotarySpring* spring, cpB
     return spring;
 }
 
+/// Allocate and initialize a damped rotary spring.
 cpConstraint* cpDampedRotarySpringNew(cpBody* a, cpBody* b, cpFloat restAngle, cpFloat stiffness, cpFloat damping)
 {
     return cast(cpConstraint*)cpDampedRotarySpringInit(cpDampedRotarySpringAlloc(), a, b, restAngle, stiffness, damping);
+}
+
+/// Check if a constraint is a damped rotary springs.
+cpBool cpConstraintIsDampedRotarySpring(const cpConstraint* constraint)
+{
+	return (constraint.klass == &klass);
+}
+
+/// Get the rest angle of the spring.
+cpFloat cpDampedRotarySpringGetRestAngle(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	return (cast(cpDampedRotarySpring*)constraint).restAngle;
+}
+
+/// Set the rest angle of the spring.
+void cpDampedRotarySpringSetRestAngle(cpConstraint* constraint, cpFloat restAngle)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpDampedRotarySpring*)constraint).restAngle = restAngle;
+}
+
+/// Get the stiffness of the spring in force/distance.
+cpFloat cpDampedRotarySpringGetStiffness(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	return (cast(cpDampedRotarySpring*)constraint).stiffness;
+}
+
+/// Set the stiffness of the spring in force/distance.
+void cpDampedRotarySpringSetStiffness(cpConstraint* constraint, cpFloat stiffness)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpDampedRotarySpring*)constraint).stiffness = stiffness;
+}
+
+/// Get the damping of the spring.
+cpFloat cpDampedRotarySpringGetDamping(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	return (cast(cpDampedRotarySpring*)constraint).damping;
+}
+
+/// Set the damping of the spring.
+void cpDampedRotarySpringSetDamping(cpConstraint* constraint, cpFloat damping)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpDampedRotarySpring*)constraint).damping = damping;
+}
+
+/// Get the damping of the spring.
+cpDampedRotarySpringTorqueFunc cpDampedRotarySpringGetSpringTorqueFunc(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	return (cast(cpDampedRotarySpring*)constraint).springTorqueFunc;
+}
+
+/// Set the damping of the spring.
+void cpDampedRotarySpringSetSpringTorqueFunc(cpConstraint* constraint, cpDampedRotarySpringTorqueFunc springTorqueFunc)
+{
+	cpAssertHard(cpConstraintIsDampedRotarySpring(constraint), "Constraint is not a damped rotary spring.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpDampedRotarySpring*)constraint).springTorqueFunc = springTorqueFunc;
 }

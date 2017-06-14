@@ -57,6 +57,9 @@ bool key_left = false;
 bool key_right = false;
 bool key_space = false;
 
+// 60 frames per second (1000 ms)
+immutable float limitFPS = 1000f / 60f;		
+
 ///
 final class GameApp {
 
@@ -72,8 +75,12 @@ private:
     cpBody*			mouseBody;
     cpConstraint*	mouseJoint;
     cpVect			mousePos_last;
-
-    bool 	m_running = true;
+	
+	ulong			lastTime = 0;
+	ulong			curTime = 0;
+	float			deltaTime = 0f;
+ 
+   	bool 	m_running = true;
 
     drawSpaceOptions options = {
         0,		// drawHash
@@ -204,8 +211,12 @@ private:
     }
 
     ///
-    public bool update() {
-
+    public bool update() 
+	{
+		curTime = SDL_GetTicks();
+       	deltaTime = (curTime - lastTime) / 1000f;
+		lastTime = curTime;
+		
         if(!m_running) return m_running;
 
         if(!framework.processEvents(&keyEvent,&mouseMove,&mouseButtonEvent))
@@ -234,6 +245,9 @@ private:
         //drawString(-300, -210, messageString);
 
         SDL_GL_SwapBuffers();
+		
+		// limiting FPS as 60 frames per second
+		SDL_Delay (cast(int)(limitFPS - deltaTime));
 
         return m_running;
     }

@@ -56,17 +56,21 @@ shared static this()
     import dchip.cpSweep1D;
 
     _initModuleCtor_cpBBTree();
-    _initModuleCtor_cpCollision();
-    _initModuleCtor_cpDampedRotarySpring();
+    _initModuleCtor_cpCollision();    
+	// TODO : DELETE
+    //_initModuleCtor_cpDampedRotarySpring();
     _initModuleCtor_cpDampedSpring();
 	// TODO : DELETE
     //_initModuleCtor_cpGearJoint();
-    //_initModuleCtor_cpGrooveJoint(); 
+    //_initModuleCtor_cpGrooveJoint(); 
+
 	//_initModuleCtor_cpPinJoint();   
     //_initModuleCtor_cpPivotJoint();
-    _initModuleCtor_cpPolyShape();
+    _initModuleCtor_cpPolyShape();
+
 	// TODO : DELETE
-    //_initModuleCtor_cpRatchetJoint();
+    //_initModuleCtor_cpRatchetJoint();
+
     //_initModuleCtor_cpRotaryLimitJoint();
     _initModuleCtor_cpShape();
 	// TODO : DELETE
