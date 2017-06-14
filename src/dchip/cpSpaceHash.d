@@ -279,7 +279,10 @@ void hashHandle(cpSpaceHash* hash, cpHandle* hand, cpBB bb)
 
 void cpSpaceHashInsert(cpSpaceHash* hash, void* obj, cpHashValue hashid)
 {
-    cpHandle* hand = cast(cpHandle*)cpHashSetInsert(hash.handleSet, hashid, obj, hash, cast(cpHashSetTransFunc)&handleSetTrans);
+    /* TODO : DELETE
+	cpHandle* hand = cast(cpHandle*)cpHashSetInsert(hash.handleSet, hashid, obj, hash, cast(cpHashSetTransFunc)&handleSetTrans);
+	*/
+    cpHandle* hand = cast(cpHandle*)cpHashSetInsert(hash.handleSet, hashid, obj, cast(cpHashSetTransFunc)&handleSetTrans, hash);
     hashHandle(hash, hand, hash.spatialIndex.bbfunc(obj));
 }
 

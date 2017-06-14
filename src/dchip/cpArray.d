@@ -19,6 +19,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+ 
+// TODO: check working, delete comments 
+ 
 module dchip.cpArray;
 
 import dchip.chipmunk;
@@ -31,7 +34,9 @@ cpArray* cpArrayNew(int size)
 
     arr.num = 0;
     arr.max = (size ? size : 4);
-    arr.arr = cast(void**)cpcalloc(arr.max, (void**).sizeof);
+	// TODO : DELETE
+    //arr.arr = cast(void**)cpcalloc(arr.max, (void**).sizeof);
+	arr.arr = cast(void**)cpcalloc(arr.max, (void*).sizeof);
 
     return arr;
 }
@@ -49,11 +54,17 @@ void cpArrayFree(cpArray* arr)
 
 void cpArrayPush(cpArray* arr, void* obj)
 {
-    if (arr.num == arr.max)
+	// TODO : DELETE
+    /*if (arr.num == arr.max)
     {
         arr.max *= 2;
         arr.arr  = cast(void**)cprealloc(arr.arr, arr.max * (void**).sizeof);
-    }
+    }*/
+	if(arr.num == arr.max)
+	{
+		arr.max = 3 * (arr.max + 1) / 2;
+		arr.arr = cast(void**)cprealloc(arr.arr, arr.max * (void*).sizeof);
+	}	
 
     arr.arr[arr.num] = obj;
     arr.num++;
@@ -68,15 +79,6 @@ void* cpArrayPop(cpArray* arr)
 
     return value;
 }
-
-//static void
-//cpArrayDeleteIndex(cpArray *arr, int idx)
-//{
-//	arr.num--;
-//
-//	arr.arr[idx] = arr.arr[arr.num];
-//	arr.arr[arr.num] = null;
-//}
 
 void cpArrayDeleteObj(cpArray* arr, void* obj)
 {
@@ -93,20 +95,6 @@ void cpArrayDeleteObj(cpArray* arr, void* obj)
         }
     }
 }
-
-//void
-//cpArrayAppend(cpArray *arr, cpArray *other)
-//{
-//	void *tail = &arr.arr[arr.num];
-//
-//	arr.num += other.num;
-//	if(arr.num >= arr.max){
-//		arr.max = arr.num;
-//		arr.arr = (void **)cprealloc(arr.arr, arr.max*sizeof(void**));
-//	}
-//
-//	memcpy(tail, other.arr, other.num*sizeof(void**));
-//}
 
 alias extern(C) void function(void*) FreeFunc;
 

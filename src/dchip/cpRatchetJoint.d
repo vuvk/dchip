@@ -28,11 +28,13 @@ import dchip.chipmunk;
 import dchip.cpBody;
 import dchip.cpConstraint;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpVect;
 
 //~ const cpConstraintClass* cpRatchetJointGetClass();
 
 /// @private
+/* TODO : DELETE
 struct cpRatchetJoint
 {
     cpConstraint constraint;
@@ -46,7 +48,7 @@ struct cpRatchetJoint
 
 mixin CP_DefineConstraintProperty!("cpRatchetJoint", cpFloat, "angle", "Angle");
 mixin CP_DefineConstraintProperty!("cpRatchetJoint", cpFloat, "phase", "Phase");
-mixin CP_DefineConstraintProperty!("cpRatchetJoint", cpFloat, "ratchet", "Ratchet");
+mixin CP_DefineConstraintProperty!("cpRatchetJoint", cpFloat, "ratchet", "Ratchet");*/
 
 void preStep(cpRatchetJoint* joint, cpFloat dt)
 {
@@ -122,8 +124,14 @@ cpFloat getImpulse(cpRatchetJoint* joint)
     return cpfabs(joint.jAcc);
 }
 
-__gshared cpConstraintClass klass;
+__gshared cpConstraintClass klass = cpConstraintClass(
+        cast(cpConstraintPreStepImpl)&preStep,
+        cast(cpConstraintApplyCachedImpulseImpl)&applyCachedImpulse,
+        cast(cpConstraintApplyImpulseImpl)&applyImpulse,
+        cast(cpConstraintGetImpulseImpl)&getImpulse,
+    );
 
+/* TODO : DELETE
 void _initModuleCtor_cpRatchetJoint()
 {
     klass = cpConstraintClass(
@@ -134,17 +142,18 @@ void _initModuleCtor_cpRatchetJoint()
     );
 }
 
-const(cpConstraintClass *) cpRatchetJointGetClass()
+const(cpConstraintClass*) cpRatchetJointGetClass()
 {
     return cast(cpConstraintClass*)&klass;
-}
+}*/
 
-cpRatchetJoint *
-cpRatchetJointAlloc()
+/// Allocate a ratchet joint.
+cpRatchetJoint* cpRatchetJointAlloc()
 {
     return cast(cpRatchetJoint*)cpcalloc(1, cpRatchetJoint.sizeof);
 }
 
+/// Initialize a ratched joint.
 cpRatchetJoint* cpRatchetJointInit(cpRatchetJoint* joint, cpBody* a, cpBody* b, cpFloat phase, cpFloat ratchet)
 {
     cpConstraintInit(cast(cpConstraint*)joint, &klass, a, b);
@@ -159,7 +168,59 @@ cpRatchetJoint* cpRatchetJointInit(cpRatchetJoint* joint, cpBody* a, cpBody* b, 
     return joint;
 }
 
-cpConstraint* cpRatchetJointNew(cpBody* a, cpBody* b, cpFloat phase, cpFloat ratchet)
+/// Allocate and initialize a ratchet joint.
+cpConstraint* cpRatchetJointNew (cpBody* a, cpBody* b, cpFloat phase, cpFloat ratchet)
 {
     return cast(cpConstraint*)cpRatchetJointInit(cpRatchetJointAlloc(), a, b, phase, ratchet);
+}
+
+/// Check if a constraint is a ratchet joint
+cpBool cpConstraintIsRatchetJoint(const cpConstraint* constraint)
+{
+	return (constraint.klass == &klass);
+}
+
+/// Get the angle of the current ratchet tooth.
+cpFloat cpRatchetJointGetAngle(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsRatchetJoint(constraint), "Constraint is not a ratchet joint.");
+	return (cast(cpRatchetJoint*)constraint).angle;
+}
+
+/// Set the angle of the current ratchet tooth.
+void cpRatchetJointSetAngle(cpConstraint* constraint, cpFloat angle)
+{
+	cpAssertHard(cpConstraintIsRatchetJoint(constraint), "Constraint is not a ratchet joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpRatchetJoint*)constraint).angle = angle;
+}
+
+/// Get the phase offset of the ratchet.
+cpFloat cpRatchetJointGetPhase(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsRatchetJoint(constraint), "Constraint is not a ratchet joint.");
+	return (cast(cpRatchetJoint*)constraint).phase;
+}
+
+/// Get the phase offset of the ratchet.
+void cpRatchetJointSetPhase(cpConstraint* constraint, cpFloat phase)
+{
+	cpAssertHard(cpConstraintIsRatchetJoint(constraint), "Constraint is not a ratchet joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpRatchetJoint*)constraint).phase = phase;
+}
+
+/// Get the angular distance of each ratchet.
+cpFloat cpRatchetJointGetRatchet(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsRatchetJoint(constraint), "Constraint is not a ratchet joint.");
+	return (cast(cpRatchetJoint*)constraint).ratchet;
+}
+
+/// Set the angular distance of each ratchet.
+void cpRatchetJointSetRatchet(cpConstraint* constraint, cpFloat ratchet)
+{
+	cpAssertHard(cpConstraintIsRatchetJoint(constraint), "Constraint is not a ratchet joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpRatchetJoint*)constraint).ratchet = ratchet;
 }

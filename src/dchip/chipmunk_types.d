@@ -196,6 +196,12 @@ struct cpVect
     }
 }
 
+/// Column major affine transform.
+struct cpTransform 
+{
+	cpFloat a, b, c, d, tx, ty;
+}
+
 /// Chipmunk's 2D matrix type.
 struct cpMat2x2
 {

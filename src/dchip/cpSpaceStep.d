@@ -27,6 +27,7 @@ import dchip.cpCollision;
 import dchip.chipmunk;
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpArbiter;
 import dchip.cpArray;
 import dchip.cpConstraint;
@@ -289,8 +290,11 @@ cpCollisionID cpSpaceCollideShapes(cpShape* a, cpShape* b, cpCollisionID id, cpS
     shape_pair[0] = a;
     shape_pair[1] = b;
     cpHashValue arbHashID = CP_HASH_PAIR(cast(cpHashValue)a, cast(cpHashValue)b);
-    cpArbiter * arb       = cast(cpArbiter*)cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair.ptr, space, cast(cpHashSetTransFunc)&cpSpaceArbiterSetTrans);
-    cpArbiterUpdate(arb, contacts, numContacts, handler, a, b);
+    /* TODO : DELETE
+	cpArbiter * arb       = cast(cpArbiter*)cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair.ptr, space, cast(cpHashSetTransFunc)&cpSpaceArbiterSetTrans);
+	*/
+	cpArbiter* arb = cast(cpArbiter*)cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair.ptr, cast(cpHashSetTransFunc)&cpSpaceArbiterSetTrans, space);
+	cpArbiterUpdate(arb, contacts, numContacts, handler, a, b);
 
     // Call the begin function first if it's the first step
     if (arb.state == cpArbiterStateFirstColl && !handler.begin(arb, space, handler.data))

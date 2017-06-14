@@ -83,8 +83,16 @@ void CheckGLErrors()
     }
 }
 
-alias PFNGLGETSHADERIVPROC = extern (C) void function( GLuint,GLenum,GLint* ) nothrow @nogc;
-alias PFNGLGETSHADERINFOLOGPROC = extern (C) void function( GLuint,GLsizei,GLsizei*,GLchar* ) nothrow @nogc;
+version (Windows)
+{
+	alias PFNGLGETSHADERIVPROC = extern (Windows) void function( GLuint,GLenum,GLint* ) nothrow @nogc;
+	alias PFNGLGETSHADERINFOLOGPROC = extern (Windows) void function( GLuint,GLsizei,GLsizei*,GLchar* ) nothrow @nogc;
+}
+else
+{
+	alias PFNGLGETSHADERIVPROC = extern (C) void function( GLuint,GLenum,GLint* ) nothrow @nogc;
+	alias PFNGLGETSHADERINFOLOGPROC = extern (C) void function( GLuint,GLsizei,GLsizei*,GLchar* ) nothrow @nogc;
+}
 
 //typedef GLAPIENTRY void (*GETIV)(GLuint shader, GLenum pname, GLint *params);
 //typedef GLAPIENTRY void (*GETINFOLOG)(GLuint shader, GLsizei maxLength, GLsizei *length, GLchar *infoLog);

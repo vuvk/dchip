@@ -28,9 +28,9 @@
 *.gui
 *.pdb
 *.zip
-/.dlangidews
-/.dlangidews.wssettings
-/dchip.settings
+*.dlangidews
+*.dlangidews.wssettings
+*.settings
 /bin/
 /examples/demo/.dub
 /examples/demo/.dub/dub.json

@@ -25,14 +25,18 @@ import std.string;
 
 import dchip.constraints_util;
 import dchip.chipmunk;
+import dchip.chipmunk_private;
+import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpBody;
 import dchip.cpConstraint;
-import dchip.chipmunk_types;
 import dchip.cpVect;
+import dchip.cpTransform;
 
 //~ const cpConstraintClass* cpGrooveJointGetClass();
 
 /// @private
+/* TODO : DELETE
 struct cpGrooveJoint
 {
     cpConstraint constraint;
@@ -49,14 +53,14 @@ struct cpGrooveJoint
 }
 
 mixin CP_DefineConstraintGetter!("cpGrooveJoint", cpVect, "grv_a", "GrooveA");
+mixin CP_DefineConstraintGetter!("cpGrooveJoint", cpVect, "grv_b", "GrooveB");
+mixin CP_DefineConstraintProperty!("cpGrooveJoint", cpVect, "anchr2", "Anchr2");
+*/
 
 /// Set endpoint a of a groove joint's groove
 void cpGrooveJointSetGrooveA(cpConstraint* constraint, cpVect value);
-mixin CP_DefineConstraintGetter!("cpGrooveJoint", cpVect, "grv_b", "GrooveB");
-
 /// Set endpoint b of a groove joint's groove
 void cpGrooveJointSetGrooveB(cpConstraint* constraint, cpVect value);
-mixin CP_DefineConstraintProperty!("cpGrooveJoint", cpVect, "anchr2", "Anchr2");
 
 void preStep(cpGrooveJoint* joint, cpFloat dt)
 {
@@ -64,16 +68,28 @@ void preStep(cpGrooveJoint* joint, cpFloat dt)
     cpBody* b = joint.constraint.b;
 
     // calculate endpoints in worldspace
+	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
+	cpVect ta = cpTransformPoint(a.transform, joint.grv_a);
+	cpVect tb = cpTransformPoint(a.transform, joint.grv_b);*/
+	/*0*/
     cpVect ta = cpBodyLocal2World(a, joint.grv_a);
     cpVect tb = cpBodyLocal2World(a, joint.grv_b);
 
-    // calculate axis
-    cpVect  n = cpvrotate(joint.grv_n, a.rot);
+    // calculate axis
+	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
+	cpVect n = cpTransformVect(a.transform, joint.grv_n);*/	
+	/*0*/	
+	cpVect  n = cpvrotate(joint.grv_n, a.rot);
     cpFloat d = cpvdot(ta, n);
 
     joint.grv_tn = n;
-    joint.r2     = cpvrotate(joint.anchr2, b.rot);
-
+    /* TODO : DELETE
+	joint.r2     = cpvrotate(joint.anchr2, b.rot); */
+	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0* 	
+	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));*/
+	/*0*/
+	joint.r2 = cpvrotate (joint.anchorB, b.rot);
+	
     // calculate tangential distance along the axis of r2
     cpFloat td = cpvcross(cpvadd(b.p, joint.r2), n);
 
@@ -142,8 +158,14 @@ cpFloat getImpulse(cpGrooveJoint* joint)
     return cpvlength(joint.jAcc);
 }
 
-__gshared cpConstraintClass klass;
+__gshared cpConstraintClass klass = cpConstraintClass(
+        cast(cpConstraintPreStepImpl)&preStep,
+        cast(cpConstraintApplyCachedImpulseImpl)&applyCachedImpulse,
+        cast(cpConstraintApplyImpulseImpl)&applyImpulse,
+        cast(cpConstraintGetImpulseImpl)&getImpulse,
+    );
 
+/* TODO : DELETE
 void _initModuleCtor_cpGrooveJoint()
 {
     klass = cpConstraintClass(
@@ -157,51 +179,95 @@ void _initModuleCtor_cpGrooveJoint()
 const(cpConstraintClass *) cpGrooveJointGetClass()
 {
     return cast(cpConstraintClass*)&klass;
-}
+}*/
 
-cpGrooveJoint *
-cpGrooveJointAlloc()
+/// Allocate a groove joint.
+cpGrooveJoint* cpGrooveJointAlloc()
 {
     return cast(cpGrooveJoint*)cpcalloc(1, cpGrooveJoint.sizeof);
 }
 
-cpGrooveJoint* cpGrooveJointInit(cpGrooveJoint* joint, cpBody* a, cpBody* b, cpVect groove_a, cpVect groove_b, cpVect anchr2)
+/// Initialize a groove joint.
+cpGrooveJoint* cpGrooveJointInit(cpGrooveJoint* joint, cpBody* a, cpBody* b, cpVect groove_a, cpVect groove_b, cpVect anchorB)
 {
     cpConstraintInit(cast(cpConstraint*)joint, &klass, a, b);
 
     joint.grv_a  = groove_a;
     joint.grv_b  = groove_b;
     joint.grv_n  = cpvperp(cpvnormalize(cpvsub(groove_b, groove_a)));
-    joint.anchr2 = anchr2;
+    joint.anchorB = anchorB;
 
     joint.jAcc = cpvzero;
 
     return joint;
 }
 
+/// Allocate and initialize a groove joint.
+/*TODO : DELETE
 cpConstraint* cpGrooveJointNew(cpBody* a, cpBody* b, cpVect groove_a, cpVect groove_b, cpVect anchr2)
 {
     return cast(cpConstraint*)cpGrooveJointInit(cpGrooveJointAlloc(), a, b, groove_a, groove_b, anchr2);
+}*/
+cpConstraint* cpGrooveJointNew(cpBody* a, cpBody* b, cpVect groove_a, cpVect groove_b, cpVect anchorB)
+{
+	return cast(cpConstraint*)cpGrooveJointInit(cpGrooveJointAlloc(), a, b, groove_a, groove_b, anchorB);
 }
 
+/// Check if a constraint is a groove joint.
+cpBool cpConstraintIsGrooveJoint(const cpConstraint* constraint)
+{
+	return (constraint.klass == &klass);
+}
+
+/// Get the first endpoint of the groove relative to the first body.
+cpVect cpGrooveJointGetGrooveA(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsGrooveJoint(constraint), "Constraint is not a groove joint.");
+	return (cast(cpGrooveJoint*)constraint).grv_a;
+}
+
+/// Set the first endpoint of the groove relative to the first body.
 void cpGrooveJointSetGrooveA(cpConstraint* constraint, cpVect value)
 {
-    cpGrooveJoint* g = cast(cpGrooveJoint*)constraint;
-    mixin(cpConstraintCheckCast("constraint", "cpGrooveJoint"));
-
+    cpAssertHard(cpConstraintIsGrooveJoint(constraint), "Constraint is not a groove joint.");
+	cpGrooveJoint* g = cast(cpGrooveJoint*)constraint;
+ 
     g.grv_a = value;
     g.grv_n = cpvperp(cpvnormalize(cpvsub(g.grv_b, value)));
 
     cpConstraintActivateBodies(constraint);
 }
 
+/// Get the first endpoint of the groove relative to the first body.
+cpVect cpGrooveJointGetGrooveB(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsGrooveJoint(constraint), "Constraint is not a groove joint.");
+	return (cast(cpGrooveJoint*)constraint).grv_b;
+}
+
+/// Set the first endpoint of the groove relative to the first body.
 void cpGrooveJointSetGrooveB(cpConstraint* constraint, cpVect value)
 {
-    cpGrooveJoint* g = cast(cpGrooveJoint*)constraint;
-    mixin(cpConstraintCheckCast("constraint", "cpGrooveJoint"));
+    cpAssertHard(cpConstraintIsGrooveJoint(constraint), "Constraint is not a groove joint.");
+	cpGrooveJoint* g = cast(cpGrooveJoint*)constraint;
 
     g.grv_b = value;
     g.grv_n = cpvperp(cpvnormalize(cpvsub(value, g.grv_a)));
 
     cpConstraintActivateBodies(constraint);
+}
+
+/// Get the location of the second anchor relative to the second body.
+cpVect cpGrooveJointGetAnchorB(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsGrooveJoint(constraint), "Constraint is not a groove joint.");
+	return (cast(cpGrooveJoint*)constraint).anchorB;
+}
+
+/// Set the location of the second anchor relative to the second body.
+void cpGrooveJointSetAnchorB(cpConstraint* constraint, cpVect anchorB)
+{
+	cpAssertHard(cpConstraintIsGrooveJoint(constraint), "Constraint is not a groove joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpGrooveJoint*)constraint).anchorB = anchorB;
 }

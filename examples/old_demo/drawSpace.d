@@ -302,11 +302,11 @@ drawConstraint(cpConstraint *constraint)
     cpBody *body_b = constraint.b;
 
     const cpConstraintClass *klass = constraint.klass;
-    if(klass == cpPinJointGetClass()){
+    if (cpConstraintIsPinJoint (constraint)) {
         cpPinJoint *joint = cast(cpPinJoint *)constraint;
 
-        cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchr1, body_a.rot));
-        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchr2, body_b.rot));
+        cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchorA, body_a.rot));
+        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
 
         glPointSize(5.0f);
         glBegin(GL_POINTS); {
@@ -318,11 +318,11 @@ drawConstraint(cpConstraint *constraint)
             glVertex2f(a.x, a.y);
             glVertex2f(b.x, b.y);
         } glEnd();
-    } else if(klass == cpSlideJointGetClass()){
+	} else if (cpConstraintIsSlideJoint (constraint)) {
         cpSlideJoint *joint = cast(cpSlideJoint *)constraint;
 
-        cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchr1, body_a.rot));
-        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchr2, body_b.rot));
+        cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchorA, body_a.rot));
+        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
 
         glPointSize(5.0f);
         glBegin(GL_POINTS); {
@@ -334,23 +334,23 @@ drawConstraint(cpConstraint *constraint)
             glVertex2f(a.x, a.y);
             glVertex2f(b.x, b.y);
         } glEnd();
-    } else if(klass == cpPivotJointGetClass()){
+	} else if (cpConstraintIsPivotJoint (constraint)){
         cpPivotJoint *joint = cast(cpPivotJoint *)constraint;
 
-        cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchr1, body_a.rot));
-        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchr2, body_b.rot));
+        cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchorA, body_a.rot));
+        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
 
         glPointSize(10.0f);
         glBegin(GL_POINTS); {
             glVertex2f(a.x, a.y);
             glVertex2f(b.x, b.y);
         } glEnd();
-    } else if(klass == cpGrooveJointGetClass()){
+    } else if(cpConstraintIsGrooveJoint(constraint)) {
         cpGrooveJoint *joint = cast(cpGrooveJoint *)constraint;
 
         cpVect a = cpvadd(body_a.p, cpvrotate(joint.grv_a, body_a.rot));
         cpVect b = cpvadd(body_a.p, cpvrotate(joint.grv_b, body_a.rot));
-        cpVect c = cpvadd(body_b.p, cpvrotate(joint.anchr2, body_b.rot));
+        cpVect c = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
 
         glPointSize(5.0f);
         glBegin(GL_POINTS); {

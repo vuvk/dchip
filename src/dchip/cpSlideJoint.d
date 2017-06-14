@@ -25,14 +25,16 @@ import std.string;
 
 import dchip.constraints_util;
 import dchip.chipmunk;
+import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpBody;
 import dchip.cpConstraint;
-import dchip.chipmunk_types;
 import dchip.cpVect;
 
 //~ const cpConstraintClass* cpSlideJointGetClass();
 
 /// @private
+/* TODO : DELETE
 struct cpSlideJoint
 {
     cpConstraint constraint;
@@ -50,16 +52,24 @@ struct cpSlideJoint
 mixin CP_DefineConstraintProperty!("cpSlideJoint", cpVect, "anchr1", "Anchr1");
 mixin CP_DefineConstraintProperty!("cpSlideJoint", cpVect, "anchr2", "Anchr2");
 mixin CP_DefineConstraintProperty!("cpSlideJoint", cpFloat, "min", "Min");
-mixin CP_DefineConstraintProperty!("cpSlideJoint", cpFloat, "max", "Max");
+mixin CP_DefineConstraintProperty!("cpSlideJoint", cpFloat, "max", "Max");*/
 
 void preStep(cpSlideJoint* joint, cpFloat dt)
 {
     cpBody* a = joint.constraint.a;
     cpBody* b = joint.constraint.b;
 
-    joint.r1 = cpvrotate(joint.anchr1, a.rot);
-    joint.r2 = cpvrotate(joint.anchr2, b.rot);
-
+    /* TODO : DELETE
+	joint.r1 = cpvrotate(joint.anchr1, a.rot);
+    joint.r2 = cpvrotate(joint.anchr2, b.rot);*/
+	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
+	joint.r1 = cpTransformVect(a.transform, cpvsub(joint.anchorA, a.cog));
+	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));
+	*/
+	/*0*/
+	joint.r1 = cpvrotate(joint.anchorA, a.rot);
+    joint.r2 = cpvrotate(joint.anchorB, b.rot);
+	
     cpVect  delta = cpvsub(cpvadd(b.p, joint.r2), cpvadd(a.p, joint.r1));
     cpFloat dist  = cpvlength(delta);
     cpFloat pdist = 0.0f;
@@ -67,12 +77,12 @@ void preStep(cpSlideJoint* joint, cpFloat dt)
     if (dist > joint.max)
     {
         pdist    = dist - joint.max;
-        joint.n = cpvnormalize_safe(delta);
+        joint.n = cpvnormalize(delta);
     }
     else if (dist < joint.min)
     {
         pdist    = joint.min - dist;
-        joint.n = cpvneg(cpvnormalize_safe(delta));
+        joint.n = cpvneg(cpvnormalize(delta));
     }
     else
     {
@@ -128,8 +138,14 @@ cpFloat getImpulse(cpConstraint* joint)
     return cpfabs((cast(cpSlideJoint*)joint).jnAcc);
 }
 
-__gshared cpConstraintClass klass;
+__gshared cpConstraintClass klass = cpConstraintClass(
+        cast(cpConstraintPreStepImpl)&preStep,
+        cast(cpConstraintApplyCachedImpulseImpl)&applyCachedImpulse,
+        cast(cpConstraintApplyImpulseImpl)&applyImpulse,
+        cast(cpConstraintGetImpulseImpl)&getImpulse,
+    );
 
+/* TODO : DELETE
 void _initModuleCtor_cpSlideJoint()
 {
     klass = cpConstraintClass(
@@ -143,20 +159,21 @@ void _initModuleCtor_cpSlideJoint()
 const(cpConstraintClass *) cpSlideJointGetClass()
 {
     return cast(cpConstraintClass*)&klass;
-}
+}*/
 
-cpSlideJoint *
-cpSlideJointAlloc()
+/// Allocate a slide joint.
+cpSlideJoint* cpSlideJointAlloc()
 {
     return cast(cpSlideJoint*)cpcalloc(1, cpSlideJoint.sizeof);
 }
 
-cpSlideJoint* cpSlideJointInit(cpSlideJoint* joint, cpBody* a, cpBody* b, cpVect anchr1, cpVect anchr2, cpFloat min, cpFloat max)
+/// Initialize a slide joint.
+cpSlideJoint* cpSlideJointInit(cpSlideJoint* joint, cpBody* a, cpBody* b, cpVect anchorA, cpVect anchorB, cpFloat min, cpFloat max)
 {
     cpConstraintInit(cast(cpConstraint*)joint, &klass, a, b);
 
-    joint.anchr1 = anchr1;
-    joint.anchr2 = anchr2;
+    joint.anchorA = anchorA;
+    joint.anchorB = anchorB;
     joint.min    = min;
     joint.max    = max;
 
@@ -165,7 +182,79 @@ cpSlideJoint* cpSlideJointInit(cpSlideJoint* joint, cpBody* a, cpBody* b, cpVect
     return joint;
 }
 
+/// Allocate and initialize a slide joint.
+/* TODO : DELETE 
 cpConstraint* cpSlideJointNew(cpBody* a, cpBody* b, cpVect anchr1, cpVect anchr2, cpFloat min, cpFloat max)
 {
     return cast(cpConstraint*)cpSlideJointInit(cpSlideJointAlloc(), a, b, anchr1, anchr2, min, max);
+}*/
+cpConstraint* cpSlideJointNew(cpBody* a, cpBody* b, cpVect anchorA, cpVect anchorB, cpFloat min, cpFloat max)
+{
+	return cast(cpConstraint*) cpSlideJointInit(cpSlideJointAlloc(), a, b, anchorA, anchorB, min, max);
+}
+
+/// Check if a constraint is a slide joint.
+cpBool cpConstraintIsSlideJoint(const cpConstraint* constraint)
+{
+	return (constraint.klass == &klass);
+}
+
+/// Get the location of the first anchor relative to the first body.
+cpVect cpSlideJointGetAnchorA(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	return (cast(cpSlideJoint*)constraint).anchorA;
+}
+
+/// Set the location of the first anchor relative to the first body.
+void cpSlideJointSetAnchorA(cpConstraint* constraint, cpVect anchorA)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpSlideJoint*)constraint).anchorA = anchorA;
+}
+
+/// Get the location of the second anchor relative to the second body.
+cpVect cpSlideJointGetAnchorB(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	return (cast(cpSlideJoint*)constraint).anchorB;
+}
+
+/// Set the location of the second anchor relative to the second body.
+void cpSlideJointSetAnchorB(cpConstraint* constraint, cpVect anchorB)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpSlideJoint*)constraint).anchorB = anchorB;
+}
+
+/// Get the minimum distance the joint will maintain between the two anchors.
+cpFloat cpSlideJointGetMin(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	return (cast(cpSlideJoint*)constraint).min;
+}
+
+/// Set the minimum distance the joint will maintain between the two anchors.
+void cpSlideJointSetMin(cpConstraint* constraint, cpFloat min)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpSlideJoint*)constraint).min = min;
+}
+
+/// Get the maximum distance the joint will maintain between the two anchors.
+cpFloat cpSlideJointGetMax(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	return (cast(cpSlideJoint*)constraint).max;
+}
+
+/// Set the maximum distance the joint will maintain between the two anchors.
+void cpSlideJointSetMax(cpConstraint* constraint, cpFloat max)
+{
+	cpAssertHard(cpConstraintIsSlideJoint(constraint), "Constraint is not a slide joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpSlideJoint*)constraint).max = max;
 }

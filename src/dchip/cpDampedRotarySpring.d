@@ -28,6 +28,7 @@ import dchip.chipmunk;
 import dchip.cpBody;
 import dchip.cpConstraint;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 
 alias cpDampedRotarySpringTorqueFunc = cpFloat function(cpConstraint* spring, cpFloat relativeAngle);
 

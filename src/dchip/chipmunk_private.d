@@ -27,6 +27,7 @@ import dchip.cpArray;
 import dchip.cpBody;
 import dchip.chipmunk;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpArbiter;
 import dchip.cpConstraint;
 import dchip.cpHashSet;
@@ -156,6 +157,16 @@ cpCollisionHandler* cpSpaceLookupHandler(cpSpace* space, cpCollisionType a, cpCo
     types[1] = b;
     return cast(cpCollisionHandler*)cpHashSetFind(space.collisionHandlers, CP_HASH_PAIR(a, b), types.ptr);
 }
+
+//MARK: Constraints
+// TODO naming conventions here
+
+// !!search it in cpConstraint.d!!
+/*static void cpConstraintActivateBodies (cpConstraint* constraint)
+{
+	cpBody* a = constraint.a; cpBodyActivate(a);
+	cpBody* b = constraint.b; cpBodyActivate(b);
+}*/
 
 void cpSpaceUncacheArbiter(cpSpace* space, cpArbiter* arb)
 {

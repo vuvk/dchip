@@ -25,13 +25,16 @@ import std.string;
 
 import dchip.constraints_util;
 import dchip.chipmunk;
+import dchip.chipmunk_private;
+import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpBody;
 import dchip.cpConstraint;
-import dchip.chipmunk_types;
 
 //~ const cpConstraintClass* cpGearJointGetClass();
 
 /// @private
+/* TODO : DELETE
 struct cpGearJoint
 {
     cpConstraint constraint;
@@ -45,7 +48,7 @@ struct cpGearJoint
 }
 
 mixin CP_DefineConstraintProperty!("cpGearJoint", cpFloat, "phase", "Phase");
-mixin CP_DefineConstraintGetter!("cpGearJoint", cpFloat, "ratio", "Ratio");
+mixin CP_DefineConstraintGetter!("cpGearJoint", cpFloat, "ratio", "Ratio");*/
 
 void preStep(cpGearJoint* joint, cpFloat dt)
 {
@@ -96,9 +99,15 @@ cpFloat getImpulse(cpGearJoint* joint)
     return cpfabs(joint.jAcc);
 }
 
-__gshared cpConstraintClass klass;
+__gshared cpConstraintClass klass = cpConstraintClass(
+        cast(cpConstraintPreStepImpl)&preStep,
+        cast(cpConstraintApplyCachedImpulseImpl)&applyCachedImpulse,
+        cast(cpConstraintApplyImpulseImpl)&applyImpulse,
+        cast(cpConstraintGetImpulseImpl)&getImpulse,
+    );
 
-void _initModuleCtor_cpGearJoint()
+// TODO : DELETE
+/*void _initModuleCtor_cpGearJoint()
 {
     klass = cpConstraintClass(
         cast(cpConstraintPreStepImpl)&preStep,
@@ -111,14 +120,15 @@ void _initModuleCtor_cpGearJoint()
 const(cpConstraintClass *) cpGearJointGetClass()
 {
     return cast(cpConstraintClass*)&klass;
-}
+}*/
 
-cpGearJoint *
-cpGearJointAlloc()
+/// Allocate a gear joint.
+cpGearJoint* cpGearJointAlloc()
 {
     return cast(cpGearJoint*)cpcalloc(1, cpGearJoint.sizeof);
 }
 
+/// Initialize a gear joint.
 cpGearJoint* cpGearJointInit(cpGearJoint* joint, cpBody* a, cpBody* b, cpFloat phase, cpFloat ratio)
 {
     cpConstraintInit(cast(cpConstraint*)joint, &klass, a, b);
@@ -132,15 +142,51 @@ cpGearJoint* cpGearJointInit(cpGearJoint* joint, cpBody* a, cpBody* b, cpFloat p
     return joint;
 }
 
+/// Allocate and initialize a gear joint.
 cpConstraint* cpGearJointNew(cpBody* a, cpBody* b, cpFloat phase, cpFloat ratio)
 {
     return cast(cpConstraint*)cpGearJointInit(cpGearJointAlloc(), a, b, phase, ratio);
 }
 
-void cpGearJointSetRatio(cpConstraint* constraint, cpFloat value)
+/// Check if a constraint is a damped rotary springs.
+cpBool cpConstraintIsGearJoint(const cpConstraint* constraint)
 {
-    mixin(cpConstraintCheckCast("constraint", "cpGearJoint"));
-    (cast(cpGearJoint*)constraint).ratio     = value;
-    (cast(cpGearJoint*)constraint).ratio_inv = 1.0f / value;
-    cpConstraintActivateBodies(constraint);
+	return (constraint.klass == &klass);
+}
+
+/// Get the phase offset of the gears.
+cpFloat cpGearJointGetPhase(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsGearJoint(constraint), "Constraint is not a ratchet joint.");
+	return (cast(cpGearJoint*)constraint).phase;
+}
+
+/// Set the phase offset of the gears.
+void cpGearJointSetPhase(cpConstraint* constraint, cpFloat phase)
+{
+	cpAssertHard(cpConstraintIsGearJoint(constraint), "Constraint is not a ratchet joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpGearJoint*)constraint).phase = phase;
+}
+
+/// Get the angular distance of each ratchet.
+cpFloat cpGearJointGetRatio(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsGearJoint(constraint), "Constraint is not a ratchet joint.");
+	return (cast(cpGearJoint*)constraint).ratio;
+}
+
+/// Set the ratio of a gear joint.
+void cpGearJointSetRatio(cpConstraint* constraint, cpFloat ratio)
+{
+	// TODO: DELETE
+    /*mixin(cpConstraintCheckCast("constraint", "cpGearJoint"));
+    (cast(cpGearJoint*)constraint).ratio     = ratio;
+    (cast(cpGearJoint*)constraint).ratio_inv = 1.0f / ratio;
+    cpConstraintActivateBodies(constraint);*/
+	
+	cpAssertHard(cpConstraintIsGearJoint(constraint), "Constraint is not a ratchet joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpGearJoint*)constraint).ratio 	  = ratio;
+	(cast(cpGearJoint*)constraint).ratio_inv = 1.0f / ratio;
 }

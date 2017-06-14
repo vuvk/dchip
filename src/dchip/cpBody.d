@@ -26,6 +26,7 @@ import std.string;
 import dchip.chipmunk;
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.constraints_util;
 import dchip.cpArray;
 import dchip.cpArbiter;
@@ -122,24 +123,24 @@ struct cpBody
         package cpFloat w_bias = 0;
 
     version (CHIP_ALLOW_PRIVATE_ACCESS)
-        cpSpace * space;
+        cpSpace* space;
     else
-        package cpSpace * space;
+        package cpSpace* space;
 
     version (CHIP_ALLOW_PRIVATE_ACCESS)
-        cpShape * shapeList;
+        cpShape* shapeList;
     else
-        package cpShape * shapeList;
+        package cpShape* shapeList;
 
     version (CHIP_ALLOW_PRIVATE_ACCESS)
-        cpArbiter * arbiterList;
+        cpArbiter* arbiterList;
     else
-        package cpArbiter *arbiterList;
+        package cpArbiter* arbiterList;
 
     version (CHIP_ALLOW_PRIVATE_ACCESS)
-        cpConstraint * constraintList;
+        cpConstraint* constraintList;
     else
-        package cpConstraint * constraintList;
+        package cpConstraint* constraintList;
 
     version (CHIP_ALLOW_PRIVATE_ACCESS)
         cpComponentNode node;

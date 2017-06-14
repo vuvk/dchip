@@ -28,12 +28,14 @@ import dchip.chipmunk;
 import dchip.cpBody;
 import dchip.cpConstraint;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpVect;
 
 //~ const cpConstraintClass* cpSimpleMotorGetClass();
 
 /// @private
-struct cpSimpleMotor
+// TODO : DELETE
+/*struct cpSimpleMotor
 {
     cpConstraint constraint;
     cpFloat rate = 0;
@@ -43,7 +45,7 @@ struct cpSimpleMotor
     cpFloat jAcc = 0;
 }
 
-mixin CP_DefineConstraintProperty!("cpSimpleMotor", cpFloat, "rate", "Rate");
+mixin CP_DefineConstraintProperty!("cpSimpleMotor", cpFloat, "rate", "Rate");*/
 
 void preStep(cpSimpleMotor* joint, cpFloat dt)
 {
@@ -90,9 +92,15 @@ cpFloat getImpulse(cpSimpleMotor* joint)
     return cpfabs(joint.jAcc);
 }
 
-__gshared cpConstraintClass klass;
+__gshared cpConstraintClass klass = cpConstraintClass(
+        cast(cpConstraintPreStepImpl)&preStep,
+        cast(cpConstraintApplyCachedImpulseImpl)&applyCachedImpulse,
+        cast(cpConstraintApplyImpulseImpl)&applyImpulse,
+        cast(cpConstraintGetImpulseImpl)&getImpulse,
+    );
 
-void _initModuleCtor_cpSimpleMotor()
+// TODO : DELETE
+/*void _initModuleCtor_cpSimpleMotor()
 {
     klass = cpConstraintClass(
         cast(cpConstraintPreStepImpl)&preStep,
@@ -100,15 +108,14 @@ void _initModuleCtor_cpSimpleMotor()
         cast(cpConstraintApplyImpulseImpl)&applyImpulse,
         cast(cpConstraintGetImpulseImpl)&getImpulse,
     );
-}
+}*/
 
 const(cpConstraintClass *) cpSimpleMotorGetClass()
 {
     return cast(cpConstraintClass*)&klass;
 }
 
-cpSimpleMotor *
-cpSimpleMotorAlloc()
+cpSimpleMotor* cpSimpleMotorAlloc()
 {
     return cast(cpSimpleMotor*)cpcalloc(1, cpSimpleMotor.sizeof);
 }
@@ -128,3 +135,21 @@ cpConstraint* cpSimpleMotorNew(cpBody* a, cpBody* b, cpFloat rate)
 {
     return cast(cpConstraint*)cpSimpleMotorInit(cpSimpleMotorAlloc(), a, b, rate);
 }
+
+cpBool cpConstraintIsSimpleMotor(const cpConstraint* constraint)
+{
+	return (constraint.klass == &klass);
+}
+
+cpFloat cpSimpleMotorGetRate(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsSimpleMotor(constraint), "Constraint is not a pin joint.");
+	return (cast(cpSimpleMotor*)constraint).rate;
+}
+
+void cpSimpleMotorSetRate(cpConstraint* constraint, cpFloat rate)
+{
+	cpAssertHard(cpConstraintIsSimpleMotor(constraint), "Constraint is not a pin joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpSimpleMotor*)constraint).rate = rate;
+}    

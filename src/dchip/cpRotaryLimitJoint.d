@@ -25,15 +25,17 @@ import std.string;
 
 import dchip.constraints_util;
 import dchip.chipmunk;
+import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpBody;
 import dchip.cpConstraint;
-import dchip.chipmunk_types;
 import dchip.cpVect;
 
 //~ const cpConstraintClass* cpRotaryLimitJointGetClass();
 
 /// @private
-struct cpRotaryLimitJoint
+// TODO : DELETE
+/*struct cpRotaryLimitJoint
 {
     cpConstraint constraint;
     cpFloat min = 0, max = 0;
@@ -42,7 +44,7 @@ struct cpRotaryLimitJoint
 
     cpFloat bias = 0;
     cpFloat jAcc = 0;
-}
+}*/
 
 mixin CP_DefineConstraintProperty!("cpRotaryLimitJoint", cpFloat, "min", "Min");
 mixin CP_DefineConstraintProperty!("cpRotaryLimitJoint", cpFloat, "max", "Max");
@@ -123,9 +125,15 @@ cpFloat getImpulse(cpRotaryLimitJoint* joint)
     return cpfabs(joint.jAcc);
 }
 
-__gshared cpConstraintClass klass;
+__gshared cpConstraintClass klass = cpConstraintClass(
+        cast(cpConstraintPreStepImpl)&preStep,
+        cast(cpConstraintApplyCachedImpulseImpl)&applyCachedImpulse,
+        cast(cpConstraintApplyImpulseImpl)&applyImpulse,
+        cast(cpConstraintGetImpulseImpl)&getImpulse,
+    );
 
-void _initModuleCtor_cpRotaryLimitJoint()
+// TODO : DELETE
+/*void _initModuleCtor_cpRotaryLimitJoint()
 {
     klass = cpConstraintClass(
         cast(cpConstraintPreStepImpl)&preStep,
@@ -133,19 +141,20 @@ void _initModuleCtor_cpRotaryLimitJoint()
         cast(cpConstraintApplyImpulseImpl)&applyImpulse,
         cast(cpConstraintGetImpulseImpl)&getImpulse,
     );
-}
+}*/
 
 const(cpConstraintClass *) cpRotaryLimitJointGetClass()
 {
     return cast(cpConstraintClass*)&klass;
 }
 
-cpRotaryLimitJoint *
-cpRotaryLimitJointAlloc()
+/// Allocate a damped rotary limit joint.
+cpRotaryLimitJoint* cpRotaryLimitJointAlloc()
 {
     return cast(cpRotaryLimitJoint*)cpcalloc(1, cpRotaryLimitJoint.sizeof);
 }
 
+/// Initialize a damped rotary limit joint.
 cpRotaryLimitJoint* cpRotaryLimitJointInit(cpRotaryLimitJoint* joint, cpBody* a, cpBody* b, cpFloat min, cpFloat max)
 {
     cpConstraintInit(cast(cpConstraint*)joint, &klass, a, b);
@@ -158,7 +167,44 @@ cpRotaryLimitJoint* cpRotaryLimitJointInit(cpRotaryLimitJoint* joint, cpBody* a,
     return joint;
 }
 
+/// Allocate and initialize a damped rotary limit joint.
 cpConstraint* cpRotaryLimitJointNew(cpBody* a, cpBody* b, cpFloat min, cpFloat max)
 {
     return cast(cpConstraint*)cpRotaryLimitJointInit(cpRotaryLimitJointAlloc(), a, b, min, max);
+}
+
+/// Check if a constraint is a damped rotary springs.
+cpBool cpConstraintIsRotaryLimitJoint(const cpConstraint* constraint)
+{
+	return (constraint.klass == &klass);
+}
+
+/// Get the minimum distance the joint will maintain between the two anchors.
+cpFloat cpRotaryLimitJointGetMin(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsRotaryLimitJoint(constraint), "Constraint is not a rotary limit joint.");
+	return (cast(cpRotaryLimitJoint*)constraint).min;
+}
+
+/// Set the minimum distance the joint will maintain between the two anchors.
+void cpRotaryLimitJointSetMin(cpConstraint* constraint, cpFloat min)
+{
+	cpAssertHard(cpConstraintIsRotaryLimitJoint(constraint), "Constraint is not a rotary limit joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpRotaryLimitJoint*)constraint).min = min;
+}
+
+/// Get the maximum distance the joint will maintain between the two anchors.
+cpFloat cpRotaryLimitJointGetMax(const cpConstraint* constraint)
+{
+	cpAssertHard(cpConstraintIsRotaryLimitJoint(constraint), "Constraint is not a rotary limit joint.");
+	return (cast(cpRotaryLimitJoint*)constraint).max;
+}
+
+/// Set the maximum distance the joint will maintain between the two anchors.
+void cpRotaryLimitJointSetMax(cpConstraint* constraint, cpFloat max)
+{
+	cpAssertHard(cpConstraintIsRotaryLimitJoint(constraint), "Constraint is not a rotary limit joint.");
+	cpConstraintActivateBodies(constraint);
+	(cast(cpRotaryLimitJoint*)constraint).max = max;
 }

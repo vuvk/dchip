@@ -59,16 +59,19 @@ shared static this()
     _initModuleCtor_cpCollision();
     _initModuleCtor_cpDampedRotarySpring();
     _initModuleCtor_cpDampedSpring();
-    _initModuleCtor_cpGearJoint();
-    _initModuleCtor_cpGrooveJoint();
-    _initModuleCtor_cpPinJoint();
-    _initModuleCtor_cpPivotJoint();
-    _initModuleCtor_cpPolyShape();
-    _initModuleCtor_cpRatchetJoint();
-    _initModuleCtor_cpRotaryLimitJoint();
+	// TODO : DELETE
+    //_initModuleCtor_cpGearJoint();
+    //_initModuleCtor_cpGrooveJoint(); 
+	//_initModuleCtor_cpPinJoint();   
+    //_initModuleCtor_cpPivotJoint();
+    _initModuleCtor_cpPolyShape();
+	// TODO : DELETE
+    //_initModuleCtor_cpRatchetJoint();
+    //_initModuleCtor_cpRotaryLimitJoint();
     _initModuleCtor_cpShape();
-    _initModuleCtor_cpSimpleMotor();
-    _initModuleCtor_cpSlideJoint();
+	// TODO : DELETE
+    //_initModuleCtor_cpSimpleMotor();
+    //_initModuleCtor_cpSlideJoint();
     _initModuleCtor_cpSpaceHash();
     _initModuleCtor_cpSweep1D();
 }

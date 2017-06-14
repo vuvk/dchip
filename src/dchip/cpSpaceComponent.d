@@ -26,6 +26,7 @@ import core.stdc.string;
 import dchip.chipmunk;
 import dchip.chipmunk_types;
 import dchip.chipmunk_private;
+import dchip.chipmunk_structs;
 import dchip.cpArray;
 import dchip.cpArbiter;
 import dchip.cpBody;
@@ -83,7 +84,10 @@ void cpSpaceActivateBody(cpSpace* space, cpBody* body_)
                 shape_pair[0] = a;
                 shape_pair[1] = b;
                 cpHashValue arbHashID = CP_HASH_PAIR(cast(cpHashValue)a, cast(cpHashValue)b);
-                cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair.ptr, arb, null);
+                
+				// TODO : DELETE
+				//cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair.ptr, arb, null);
+				cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair.ptr, null, arb);
 
                 // Update the arbiter's state
                 arb.stamp   = space.stamp;

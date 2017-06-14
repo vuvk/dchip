@@ -702,7 +702,9 @@ void cpBBTreeDestroy(cpBBTree* tree)
 
 void cpBBTreeInsert(cpBBTree* tree, void* obj, cpHashValue hashid)
 {
-    Node* leaf = cast(Node*)cpHashSetInsert(tree.leaves, hashid, obj, tree, safeCast!cpHashSetTransFunc(&leafSetTrans));
+    // TODO : DELETE
+	//Node* leaf = cast(Node*)cpHashSetInsert(tree.leaves, hashid, obj, tree, safeCast!cpHashSetTransFunc(&leafSetTrans));
+    Node* leaf = cast(Node*)cpHashSetInsert(tree.leaves, hashid, obj, safeCast!cpHashSetTransFunc(&leafSetTrans), tree);
 
     Node* root = tree.root;
     tree.root = SubtreeInsert(root, leaf, tree);

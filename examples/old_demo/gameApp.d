@@ -9,6 +9,7 @@ module gameApp;
 
 import core.stdc.stdlib;
 import core.thread;
+import core.memory;
 
 import std.stdio;
 

@@ -30,6 +30,7 @@ import dchip.cpBody;
 import dchip.chipmunk;
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpArbiter;
 import dchip.cpConstraint;
 import dchip.cpHashSet;

@@ -158,7 +158,7 @@ int cpHashSetCount(cpHashSet* set)
     return set.entries;
 }
 
-void* cpHashSetInsert(cpHashSet* set, cpHashValue hash, void* ptr, void* data, cpHashSetTransFunc trans)
+void* cpHashSetInsert(cpHashSet *set, cpHashValue hash, void *ptr, cpHashSetTransFunc trans, void *data)
 {
     cpHashValue idx = hash % set.size;
 
