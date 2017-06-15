@@ -30,14 +30,19 @@ import dchip.cpBody;
 import dchip.chipmunk;
 import dchip.chipmunk_types;
 import dchip.cpSpace;
+
+import dchip.cpShape;
+
+import dchip.cpBB;
 import dchip.cpConstraint;
 
-/*struct cpArray {
+struct cpArray 
+{
 	int num, max;
-	void **arr;
+	void** arr;
 };
 
-struct cpBody {
+/*struct cpBody {
 	// Integration functions
 	cpBodyVelocityFunc velocity_func;
 	cpBodyPositionFunc position_func;
@@ -83,9 +88,10 @@ struct cpBody {
 		cpBody *next;
 		cpFloat idleTime;
 	} sleeping;
-};
+};*/
 
-enum cpArbiterState {
+enum cpArbiterState
+{
 	// Arbiter is active and its the first collision.
 	CP_ARBITER_STATE_FIRST_COLLISION,
 	// Arbiter is active and its not the first collision.
@@ -97,100 +103,107 @@ enum cpArbiterState {
 	CP_ARBITER_STATE_CACHED,
 	// Collison arbiter is invalid because one of the shapes was removed.
 	CP_ARBITER_STATE_INVALIDATED,
-};
+}
 
-struct cpArbiterThread {
-	struct cpArbiter *next, *prev;
-};
+struct cpArbiterThread
+{
+	cpArbiter* next, prev;
+}
 
-struct cpContact {
+struct cpContact 
+{
 	cpVect r1, r2;
 	
-	cpFloat nMass, tMass;
-	cpFloat bounce; // TODO: look for an alternate bounce solution.
+	cpFloat nMass = 0, tMass = 0;
+	cpFloat bounce = 0; // TODO: look for an alternate bounce solution.
 
-	cpFloat jnAcc, jtAcc, jBias;
-	cpFloat bias;
+	cpFloat jnAcc = 0, jtAcc = 0, jBias = 0;
+	cpFloat bias = 0;
 	
-	cpHashValue hash;
-};
+	cpHashValue hash = 0;
+}
 
-struct cpCollisionInfo {
-	const cpShape *a, *b;
+struct cpCollisionInfo 
+{
+	cpShape* a, b;
 	cpCollisionID id;
 	
 	cpVect n;
 	
-	int count;
+	int count = 0;
 	// TODO Should this be a unique struct type?
-	struct cpContact *arr;
-};
+	cpContact* arr;
+}
 
-struct cpArbiter {
-	cpFloat e;
-	cpFloat u;
+struct cpArbiter 
+{
+	cpFloat e = 0;
+	cpFloat u = 0;
 	cpVect surface_vr;
 	
 	cpDataPointer data;
 	
-	const cpShape *a, *b;
-	cpBody *body_a, *body_b;
-	struct cpArbiterThread thread_a, thread_b;
+	cpShape* a, b;
+	cpBody* body_a, body_b;
+	cpArbiterThread thread_a, thread_b;
 	
-	int count;
-	struct cpContact *contacts;
+	int count = 0;
+	cpContact* contacts;
 	cpVect n;
 	
 	// Regular, wildcard A and wildcard B collision handlers.
-	cpCollisionHandler *handler, *handlerA, *handlerB;
-	cpBool swapped;
+	cpCollisionHandler* handler, handlerA, handlerB;
+	cpBool swapped = false;
 	
 	cpTimestamp stamp;
-	enum cpArbiterState state;
-};
+	cpArbiterState state;
+}
 
-struct cpShapeMassInfo {
-	cpFloat m;
-	cpFloat i;
+struct cpShapeMassInfo 
+{
+	cpFloat m = 0;
+	cpFloat i = 0;
 	cpVect cog;
-	cpFloat area;
-};
+	cpFloat area = 0;
+}
 
-typedef enum cpShapeType{
+enum cpShapeType 
+{
 	CP_CIRCLE_SHAPE,
 	CP_SEGMENT_SHAPE,
 	CP_POLY_SHAPE,
 	CP_NUM_SHAPES
-} cpShapeType;
+}
 
-typedef cpBB (*cpShapeCacheDataImpl)(cpShape *shape, cpTransform transform);
-typedef void (*cpShapeDestroyImpl)(cpShape *shape);
-typedef void (*cpShapePointQueryImpl)(const cpShape *shape, cpVect p, cpPointQueryInfo *info);
-typedef void (*cpShapeSegmentQueryImpl)(const cpShape *shape, cpVect a, cpVect b, cpFloat radius, cpSegmentQueryInfo *info);
+alias cpShapeCacheDataImpl = cpBB function(cpShape* shape, cpTransform transform);
+alias cpShapeDestroyImpl = void function(cpShape* shape);
+alias cpShapePointQueryImpl = void function(const cpShape* shape, cpVect p, cpPointQueryInfo* info);
+alias cpShapeSegmentQueryImpl = void function(const cpShape* shape, cpVect a, cpVect b, cpFloat radius, cpSegmentQueryInfo* info);
 
-typedef struct cpShapeClass cpShapeClass;
+struct cpShapeClass
+{
+    cpShapeType type;
 
-struct cpShapeClass {
-	cpShapeType type;
-	
+
 	cpShapeCacheDataImpl cacheData;
 	cpShapeDestroyImpl destroy;
 	cpShapePointQueryImpl pointQuery;
 	cpShapeSegmentQueryImpl segmentQuery;
-};
+}
 
-struct cpShape {
-	const cpShapeClass *klass;
+struct cpShape 
+{
+	cpShapeClass* klass;
 	
-	cpSpace *space;
-	cpBody *body;
-	struct cpShapeMassInfo massInfo;
+	cpSpace* space;
+	cpBody* body_;
+	cpShapeMassInfo massInfo;
 	cpBB bb;
 	
 	cpBool sensor;
 	
-	cpFloat e;
-	cpFloat u;
+	cpFloat e = 0;
+	cpFloat u = 0;
 	cpVect surfaceV;
 
 	cpDataPointer userData;
@@ -198,47 +211,51 @@ struct cpShape {
 	cpCollisionType type;
 	cpShapeFilter filter;
 	
-	cpShape *next;
-	cpShape *prev;
+	cpShape* next;
+	cpShape* prev;
 	
 	cpHashValue hashid;
-};
+}
 
-struct cpCircleShape {
+struct cpCircleShape
+{
 	cpShape shape;
 	
 	cpVect c, tc;
-	cpFloat r;
-};
+	cpFloat r = 0;
+}
 
-struct cpSegmentShape {
+struct cpSegmentShape 
+{
 	cpShape shape;
 	
 	cpVect a, b, n;
 	cpVect ta, tb, tn;
-	cpFloat r;
+	cpFloat r = 0;
 	
 	cpVect a_tangent, b_tangent;
-};
+}
 
-struct cpSplittingPlane {
+struct cpSplittingPlane
+{
 	cpVect v0, n;
-};
+}
 
-#define CP_POLY_SHAPE_INLINE_ALLOC 6
+enum CP_POLY_SHAPE_INLINE_ALLOC = 6;
 
-struct cpPolyShape {
+struct cpPolyShape 
+{
 	cpShape shape;
 	
 	cpFloat r;
 	
 	int count;
 	// The untransformed planes are appended at the end of the transformed planes.
-	struct cpSplittingPlane *planes;
+	cpSplittingPlane* planes;
 	
 	// Allocate a small number of splitting planes internally for simple poly.
-	struct cpSplittingPlane _planes[2*CP_POLY_SHAPE_INLINE_ALLOC];
-};*/
+	cpSplittingPlane[2*CP_POLY_SHAPE_INLINE_ALLOC] _planes;
+}
 
 
 
@@ -246,7 +263,8 @@ alias cpConstraintPreStepImpl = void function(cpConstraint* constraint, cpFloat 
 alias cpConstraintApplyCachedImpulseImpl = void function(cpConstraint* constraint, cpFloat dt_coef);
 alias cpConstraintApplyImpulseImpl = void function(cpConstraint* constraint, cpFloat dt);
 alias cpConstraintGetImpulseImpl = cpFloat function(cpConstraint* constraint);
-
+
+
 /// @private
 struct cpConstraintClass
 {
@@ -367,23 +385,32 @@ struct cpGrooveJoint
     cpVect bias;
 }
 
-/*struct cpDampedSpring {
-	cpConstraint constraint;
-	cpVect anchorA, anchorB;
-	cpFloat restLength;
-	cpFloat stiffness;
-	cpFloat damping;
-	cpDampedSpringForceFunc springForceFunc;
-	
-	cpFloat target_vrn;
-	cpFloat v_coef;
-	
-	cpVect r1, r2;
-	cpFloat nMass;
-	cpVect n;
-	
-	cpFloat jAcc;
-};*/
+
+/// Function type used for damped spring force callbacks.
+alias cpDampedSpringForceFunc = cpFloat function(cpConstraint* spring, cpFloat dist);
+
+
+struct cpDampedSpring
+{
+    cpConstraint constraint;
+    cpVect anchorA, anchorB;
+    cpFloat restLength = 0;
+    cpFloat stiffness = 0;
+    cpFloat damping = 0;
+    cpDampedSpringForceFunc springForceFunc;
+
+
+    cpFloat target_vrn = 0;
+    cpFloat v_coef = 0;
+
+
+    cpVect r1, r2;
+    cpFloat nMass = 0;
+    cpVect n;
+
+
+    cpFloat jAcc = 0;
+}
 
 /// Function type used for damped rotary spring force callbacks.
 alias cpDampedRotarySpringTorqueFunc = cpFloat function(cpConstraint* spring, cpFloat relativeAngle);
@@ -395,10 +422,12 @@ struct cpDampedRotarySpring
     cpFloat stiffness = 0;
     cpFloat damping = 0;
     cpDampedRotarySpringTorqueFunc springTorqueFunc;
-
+
+
     cpFloat target_wrn = 0;
     cpFloat w_coef = 0;
-
+
+
     cpFloat iSum = 0;
     cpFloat jAcc = 0;
 }

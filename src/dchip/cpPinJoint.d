@@ -24,7 +24,8 @@ module dchip.cpPinJoint;
 import std.string;
 
 import dchip.constraints_util;
-import dchip.chipmunk;
+import dchip.chipmunk;
+import dchip.chipmunk_private;
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
 import dchip.cpBody;
@@ -166,7 +167,8 @@ cpPinJoint* cpPinJointInit(cpPinJoint* joint, cpBody* a, cpBody* b, cpVect ancho
 	joint.anchorB = anchorB;
 		
 	// TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE /*0*/
-	/+  
+	/+  
+
 	// STATIC_BODY_CHECK
 	cpVect p1 = (a ? cpTransformPoint(a.transform, anchorA) : anchorA);
 	cpVect p2 = (b ? cpTransformPoint(b.transform, anchorB) : anchorB);+/

@@ -26,17 +26,20 @@ import dchip.cpBody;
 import dchip.chipmunk;
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpShape;
 import dchip.cpVect;
 
 /// @private
+/* TODO : DELETE
 struct cpSplittingPlane
 {
     cpVect n;
     cpFloat d = 0;
-}
+}*/
 
 /// @private
+/* TODO : DELETE
 struct cpPolyShape
 {
     cpShape shape;
@@ -48,12 +51,321 @@ struct cpPolyShape
     cpSplittingPlane* tPlanes;
 
     cpFloat r = 0;
-}
+}*/
 
+/// Allocate a polygon shape.
 cpPolyShape* cpPolyShapeAlloc()
 {
     return cast(cpPolyShape*)cpcalloc(1, cpPolyShape.sizeof);
 }
+
+static void cpPolyShapeDestroy(cpPolyShape* poly)
+{
+	if(poly.count > CP_POLY_SHAPE_INLINE_ALLOC)
+	{
+		cpfree(poly.planes);
+	}
+}
+
+static cpBB cpPolyShapeCacheData(cpPolyShape* poly, cpTransform transform)
+{
+	int count = poly.count;
+	cpSplittingPlane* dst = poly.planes;
+	cpSplittingPlane* src = dst + count;
+	
+	cpFloat l = cast(cpFloat)INFINITY, r = -cast(cpFloat)INFINITY;
+	cpFloat b = cast(cpFloat)INFINITY, t = -cast(cpFloat)INFINITY;
+	
+	for(int i=0; i<count; i++)
+	{
+		cpVect v = cpTransformPoint(transform, src[i].v0);
+		cpVect n = cpTransformVect (transform, src[i].n);
+		
+		dst[i].v0 = v;
+		dst[i].n = n;
+		
+		l = cpfmin(l, v.x);
+		r = cpfmax(r, v.x);
+		b = cpfmin(b, v.y);
+		t = cpfmax(t, v.y);
+	}
+	
+	cpFloat radius = poly.r;
+	return (poly.shape.bb = cpBBNew(l - radius, b - radius, r + radius, t + radius));
+}
+
+static void cpPolyShapePointQuery(cpPolyShape* poly, cpVect p, cpPointQueryInfo* info)
+{
+	int count = poly.count;
+	cpSplittingPlane* planes = poly.planes;
+	cpFloat r = poly.r;
+	
+	cpVect v0 = planes[count - 1].v0;
+	cpFloat minDist = INFINITY;
+	cpVect closestPoint = cpvzero;
+	cpVect closestNormal = cpvzero;
+	cpBool outside = cpFalse;
+	
+	for(int i=0; i<count; i++)
+	{
+		cpVect v1 = planes[i].v0;
+		outside = outside || (cpvdot(planes[i].n, cpvsub(p,v1)) > 0.0f);
+		
+		cpVect closest = cpClosetPointOnSegment(p, v0, v1);
+		
+		cpFloat dist = cpvdist(p, closest);
+		if(dist < minDist)
+		{
+			minDist = dist;
+			closestPoint = closest;
+			closestNormal = planes[i].n;
+		}
+		
+		v0 = v1;
+	}
+	
+	cpFloat dist = (outside ? minDist : -minDist);
+	cpVect g = cpvmult(cpvsub(p, closestPoint), 1.0f/dist);
+	
+	info.shape = cast(cpShape*)poly;
+	info.point = cpvadd(closestPoint, cpvmult(g, r));
+	info.distance = dist - r;
+	
+	// Use the normal of the closest segment if the distance is small.
+	info.gradient = (minDist > MAGIC_EPSILON ? g : closestNormal);
+}
+
+static void cpPolyShapeSegmentQuery(cpPolyShape* poly, cpVect a, cpVect b, cpFloat r2, cpSegmentQueryInfo* info)
+{
+	cpSplittingPlane* planes = poly.planes;
+	int count = poly.count;
+	cpFloat r = poly.r;
+	cpFloat rsum = r + r2;
+	
+	for(int i=0; i<count; i++)
+	{
+		cpVect n = planes[i].n;
+		cpFloat an = cpvdot(a, n);
+		cpFloat d =  an - cpvdot(planes[i].v0, n) - rsum;
+		if(d < 0.0f) continue;
+		
+		cpFloat bn = cpvdot(b, n);
+		cpFloat t = d/(an - bn);
+		if(t < 0.0f || 1.0f < t) continue;
+		
+		cpVect point = cpvlerp(a, b, t);
+		cpFloat dt = cpvcross(n, point);
+		cpFloat dtMin = cpvcross(n, planes[(i - 1 + count)%count].v0);
+		cpFloat dtMax = cpvcross(n, planes[i].v0);
+		
+		if(dtMin <= dt && dt <= dtMax)
+		{
+			info.shape = cast(cpShape*)poly;
+			info.point = cpvsub(cpvlerp(a, b, t), cpvmult(n, r2));
+			info.normal = n;
+			info.alpha = t;
+		}
+	}
+	
+	// Also check against the beveled vertexes.
+	if(rsum > 0.0f)
+	{
+		for(int i=0; i<count; i++)
+		{
+			cpSegmentQueryInfo circle_info = {NULL, b, cpvzero, 1.0f};
+			CircleSegmentQuery(&poly.shape, planes[i].v0, r, a, b, r2, &circle_info);
+			if(circle_info.alpha < info.alpha) (*info) = circle_info;
+		}
+	}
+}
+
+static void SetVerts(cpPolyShape* poly, int count, const cpVect* verts)
+{
+	poly.count = count;
+	if(count <= CP_POLY_SHAPE_INLINE_ALLOC)
+	{
+		poly.planes = poly._planes;
+	} 
+	else 
+	{
+		poly.planes = cast(cpSplittingPlane*)cpcalloc(2*count, cpSplittingPlane.sizeof);
+	}
+	
+	for(int i=0; i<count; i++)
+	{
+		cpVect a = verts[(i - 1 + count)%count];
+		cpVect b = verts[i];
+		cpVect n = cpvnormalize(cpvrperp(cpvsub(b, a)));
+		
+		poly.planes[i + count].v0 = b;
+		poly.planes[i + count].n = n;
+	}
+}
+
+static cpShapeMassInfo cpPolyShapeMassInfo(cpFloat mass, int count, const cpVect* verts, cpFloat radius)
+{
+	// TODO moment is approximate due to radius.
+	
+	cpVect centroid = cpCentroidForPoly(count, verts);
+	cpShapeMassInfo info = {
+		mass, cpMomentForPoly(1.0f, count, verts, cpvneg(centroid), radius),
+		centroid,
+		cpAreaForPoly(count, verts, radius),
+	};
+	
+	return info;
+}
+
+__gshared cpShapeClass polyClass = cpShapeClass(
+        cpShapeType.CP_POLY_SHAPE,
+        cast(cpShapeCacheDataImpl)&cpPolyShapeCacheData,
+        cast(cpShapeDestroyImpl)&cpPolyShapeDestroy,
+        cast(cpShapePointQueryImpl)&cpPolyShapePointQuery,
+        cast(cpShapeSegmentQueryImpl)&cpPolyShapeSegmentQuery,
+    );
+	
+/// Initialize a polygon shape with rounded corners.
+cpPolyShape* cpPolyShapeInit(cpPolyShape* poly, cpBody* body_, int count, const cpVect* verts, cpTransform transform, cpFloat radius)
+{
+	cpVect* hullVerts = cast(cpVect*)alloca(count*cpVect.sizeof);
+	
+	// Transform the verts before building the hull in case of a negative scale.
+	for(int i=0; i<count; i++) 
+		hullVerts[i] = cpTransformPoint(transform, verts[i]);
+	
+	uint hullCount = cpConvexHull(count, hullVerts, hullVerts, NULL, 0.0);
+	return cpPolyShapeInitRaw(poly, body_, hullCount, hullVerts, radius);
+}
+
+/// Initialize a polygon shape with rounded corners.
+/// The vertexes must be convex with a counter-clockwise winding.
+cpPolyShape* cpPolyShapeInitRaw(cpPolyShape* poly, cpBody* body_, int count, const cpVect* verts, cpFloat radius)
+{
+	cpShapeInit(cast(cpShape*)poly, &polyClass, body_, cpPolyShapeMassInfo(0.0f, count, verts, radius));
+	
+	SetVerts(poly, count, verts);
+	poly.r = radius;
+
+	return poly;
+}
+
+/// Allocate and initialize a polygon shape with rounded corners.
+/// A convex hull will be created from the vertexes.
+cpShape* cpPolyShapeNew(cpBody* body_, int numVerts, const cpVect* verts, cpVect offset, cpFloat radius)
+{
+	return cast(cpShape*)cpPolyShapeInit(cpPolyShapeAlloc(), body_, count, verts, transform, radius);
+}
+
+/// Allocate and initialize a polygon shape with rounded corners.
+/// The vertexes must be convex with a counter-clockwise winding.
+cpShape* cpPolyShapeNewRaw(cpBody* body_, int count, const cpVect* verts, cpFloat radius)
+{
+	return cast(cpShape*)cpPolyShapeInitRaw(cpPolyShapeAlloc(), body_, count, verts, radius);
+}
+
+/// Initialize a box shaped polygon shape with rounded corners.
+cpPolyShape* cpBoxShapeInit(cpPolyShape* poly, cpBody* body_, cpFloat width, cpFloat height, cpFloat radius)
+{
+    cpFloat hw = width / 2.0f;
+    cpFloat hh = height / 2.0f;
+
+    return cpBoxShapeInit2(poly, body_, cpBBNew(-hw, -hh, hw, hh));
+}
+
+/// Initialize an offset box shaped polygon shape with rounded corners.
+cpPolyShape*  cpBoxShapeInit2(cpPolyShape* poly, cpBody* body_, cpBB box, cpFloat radius)
+{
+	cpVect[] verts = {
+		cpv(box.r, box.b),
+		cpv(box.r, box.t),
+		cpv(box.l, box.t),
+		cpv(box.l, box.b),
+	};
+	
+	return cpPolyShapeInitRaw(poly, body_, 4, verts, radius);
+}
+
+/// Allocate and initialize a box shaped polygon shape.
+cpShape*  cpBoxShapeNew(cpBody* body_, cpFloat width, cpFloat height, cpFloat radius)
+{
+	return cast(cpShape*)cpBoxShapeInit(cpPolyShapeAlloc(), body_, width, height, radius);
+}
+
+/// Allocate and initialize an offset box shaped polygon shape.
+cpShape* cpBoxShapeNew2(cpBody* body_, cpBB box, cpFloat radius)
+{
+	return cast(cpShape*)cpBoxShapeInit2(cpPolyShapeAlloc(), body_, box, radius);
+}
+
+/// Get the number of verts in a polygon shape.
+int cpPolyShapeGetCount(const cpShape* shape)
+{
+	cpAssertHard(shape.klass == &polyClass, "Shape is not a poly shape.");
+	return (cast(cpPolyShape*)shape).count;
+}
+
+/// Get the @c ith vertex of a polygon shape.
+cpVect cpPolyShapeGetVert(const cpShape* shape, int i)
+{
+	cpAssertHard(shape.klass == &polyClass, "Shape is not a poly shape.");
+	
+	int count = cpPolyShapeGetCount(shape);
+	cpAssertHard(0 <= i && i < count, "Index out of range.");
+	
+	return (cast(cpPolyShape*)shape).planes[i + count].v0;
+}
+
+/// Get the radius of a polygon shape.
+cpFloat cpPolyShapeGetRadius(const cpShape* shape)
+{
+	cpAssertHard(shape.klass == &polyClass, "Shape is not a poly shape.");
+	return (cast(cpPolyShape*)shape).r;
+}
+
+// Unsafe API (chipmunk_unsafe.h)
+
+void cpPolyShapeSetVerts(cpShape* shape, int count, cpVect* verts, cpTransform transform)
+{
+	cpVect* hullVerts = cast(cpVect*)alloca(count*cpVect.sizeof);
+	
+	// Transform the verts before building the hull in case of a negative scale.
+	for(int i=0; i<count; i++) 
+		hullVerts[i] = cpTransformPoint(transform, verts[i]);
+	
+	uint hullCount = cpConvexHull(count, hullVerts, hullVerts, NULL, 0.0);
+	cpPolyShapeSetVertsRaw(shape, hullCount, hullVerts);
+}
+
+void cpPolyShapeSetVertsRaw(cpShape* shape, int count, cpVect* verts)
+{
+	cpAssertHard(shape.klass == &polyClass, "Shape is not a poly shape.");
+	cpPolyShape* poly = cast(cpPolyShape*)shape;
+	cpPolyShapeDestroy(poly);
+	
+	SetVerts(poly, count, verts);
+	
+	cpFloat mass = shape.massInfo.m;
+	shape.massInfo = cpPolyShapeMassInfo(shape.massInfo.m, count, verts, poly.r);
+	if(mass > 0.0f) 
+		cpBodyAccumulateMassFromShapes(shape.body_);
+}
+
+void cpPolyShapeSetRadius(cpShape* shape, cpFloat radius)
+{
+	cpAssertHard(shape.klass == &polyClass, "Shape is not a poly shape.");
+	cpPolyShape* poly = cast(cpPolyShape*)shape;
+	poly.r = radius;	
+	
+	// TODO radius is not handled by moment/area
+	//	cpFloat mass = shape.massInfo.m;
+	//	shape.massInfo = cpPolyShapeMassInfo(shape.massInfo.m, poly.count, poly.verts, poly.r);
+	//	if(mass > 0.0f) cpBodyAccumulateMassFromShapes(shape.body);
+}
+
+
+
+/+ TODO : DELETE
+
 
 cpBB cpPolyShapeTransformVerts(cpPolyShape* poly, cpVect p, cpVect rot)
 {
@@ -91,6 +403,7 @@ void cpPolyShapeTransformAxes(cpPolyShape* poly, cpVect p, cpVect rot)
     }
 }
 
+/* TODO : DELETE
 cpBB cpPolyShapeCacheData(cpPolyShape* poly, cpVect p, cpVect rot)
 {
     cpPolyShapeTransformAxes(poly, p, rot);
@@ -103,7 +416,7 @@ void cpPolyShapeDestroy(cpPolyShape* poly)
 {
     cpfree(poly.verts);
     cpfree(poly.planes);
-}
+}*/
 
 void cpPolyShapeNearestPointQuery(cpPolyShape* poly, cpVect p, cpNearestPointQueryInfo* info)
 {
@@ -149,6 +462,7 @@ void cpPolyShapeNearestPointQuery(cpPolyShape* poly, cpVect p, cpNearestPointQue
     info.g = (minDist > MAGIC_EPSILON ? g : closestNormal);
 }
 
+/* TODO : DELETE
 void cpPolyShapeSegmentQuery(cpPolyShape* poly, cpVect a, cpVect b, cpSegmentQueryInfo* info)
 {
     cpSplittingPlane* axes = poly.tPlanes;
@@ -196,10 +510,10 @@ void cpPolyShapeSegmentQuery(cpPolyShape* poly, cpVect a, cpVect b, cpSegmentQue
                 (*info) = circle_info;
         }
     }
-}
+}*/
 
-__gshared cpShapeClass polyClass;
 
+/* TODO : DELETE
 void _initModuleCtor_cpPolyShape()
 {
     polyClass = cpShapeClass(
@@ -209,7 +523,7 @@ void _initModuleCtor_cpPolyShape()
         cast(cpShapeNearestPointQueryImpl)&cpPolyShapeNearestPointQuery,
         cast(cpShapeSegmentQueryImpl)&cpPolyShapeSegmentQuery,
     );
-};
+};*/
 
 cpBool cpPolyValidate(const cpVect* verts, const int numVerts)
 {
@@ -254,8 +568,8 @@ void setUpVerts(cpPolyShape* poly, int numVerts, const cpVect* verts, cpVect off
     cpAssertHard(cpPolyValidate(verts, numVerts), "Polygon is concave or has a reversed winding. Consider using cpConvexHull().");
 
     poly.numVerts = numVerts;
-    poly.verts    = cast(cpVect*)cpcalloc(2 * numVerts, cpVect.sizeof);
-    poly.planes   = cast(cpSplittingPlane*)cpcalloc(2 * numVerts, cpSplittingPlane.sizeof);
+    poly.verts    = cast(cpVect*)cpcalloc(2*  numVerts, cpVect.sizeof);
+    poly.planes   = cast(cpSplittingPlane*)cpcalloc(2*  numVerts, cpSplittingPlane.sizeof);
     poly.tVerts   = poly.verts + numVerts;
     poly.tPlanes  = poly.planes + numVerts;
 
@@ -277,11 +591,6 @@ void setUpVerts(cpPolyShape* poly, int numVerts, const cpVect* verts, cpVect off
     }
 }
 
-cpPolyShape* cpPolyShapeInit(cpPolyShape* poly, cpBody* body_, int numVerts, const cpVect* verts, cpVect offset)
-{
-    return cpPolyShapeInit2(poly, body_, numVerts, verts, offset, 0.0f);
-}
-
 cpPolyShape* cpPolyShapeInit2(cpPolyShape* poly, cpBody* body_, int numVerts, const cpVect* verts, cpVect offset, cpFloat radius)
 {
     setUpVerts(poly, numVerts, verts, offset);
@@ -291,23 +600,11 @@ cpPolyShape* cpPolyShapeInit2(cpPolyShape* poly, cpBody* body_, int numVerts, co
     return poly;
 }
 
-cpShape* cpPolyShapeNew(cpBody* body_, int numVerts, const cpVect* verts, cpVect offset)
-{
-    return cpPolyShapeNew2(body_, numVerts, verts, offset, 0.0f);
-}
-
 cpShape* cpPolyShapeNew2(cpBody* body_, int numVerts, const cpVect* verts, cpVect offset, cpFloat radius)
 {
     return cast(cpShape*)cpPolyShapeInit2(cpPolyShapeAlloc(), body_, numVerts, verts, offset, radius);
 }
 
-cpPolyShape* cpBoxShapeInit(cpPolyShape* poly, cpBody* body_, cpFloat width, cpFloat height)
-{
-    cpFloat hw = width / 2.0f;
-    cpFloat hh = height / 2.0f;
-
-    return cpBoxShapeInit2(poly, body_, cpBBNew(-hw, -hh, hw, hh));
-}
 
 cpPolyShape* cpBoxShapeInit2(cpPolyShape* poly, cpBody* body_, cpBB box)
 {
@@ -353,4 +650,4 @@ void cpPolyShapeSetRadius(cpShape* shape, cpFloat radius)
 {
     cpAssertHard(shape.klass == &polyClass, "Shape is not a poly shape.");
     (cast(cpPolyShape*)shape).r = radius;
-}
+}+/

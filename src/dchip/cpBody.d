@@ -217,7 +217,7 @@ void cpBodySleepWithGroup(cpBody* body_, cpBody* group)
         return;
     }
 
-    mixin(CP_BODY_FOREACH_SHAPE!("body_", "shape", "cpShapeUpdate(shape, body_.p, body_.rot);"));
+    //mixin(CP_BODY_FOREACH_SHAPE!("body_", "shape", "cpShapeUpdate(shape, body_.p, body_.rot);"));
     cpSpaceDeactivateBody(space, body_);
 
     if (group)

@@ -47,11 +47,12 @@ cpHashValue CP_HASH_PAIR(T1, T2)(T1 a, T2 b)
 // TODO: Eww. Magic numbers.
 enum MAGIC_EPSILON = 1e-5;
 
+/* TODO : DELETE
 struct cpArray
 {
     int num, max;
     void** arr;
-}
+}*/
 
 cpConstraint* cpConstraintNext(cpConstraint* node, cpBody* bdy)
 {
@@ -161,12 +162,11 @@ cpCollisionHandler* cpSpaceLookupHandler(cpSpace* space, cpCollisionType a, cpCo
 //MARK: Constraints
 // TODO naming conventions here
 
-// !!search it in cpConstraint.d!!
-/*static void cpConstraintActivateBodies (cpConstraint* constraint)
+static void cpConstraintActivateBodies (cpConstraint* constraint)
 {
 	cpBody* a = constraint.a; cpBodyActivate(a);
 	cpBody* b = constraint.b; cpBodyActivate(b);
-}*/
+}
 
 void cpSpaceUncacheArbiter(cpSpace* space, cpArbiter* arb)
 {
@@ -179,6 +179,7 @@ void cpSpaceUncacheArbiter(cpSpace* space, cpArbiter* arb)
     cpArrayDeleteObj(space.arbiters, arb);
 }
 
+/* TODO : DELETE
 struct cpContact
 {
     cpVect p, n;
@@ -191,7 +192,7 @@ struct cpContact
     cpFloat bias = 0;
 
     cpHashValue hash;
-}
+}*/
 
 void cpArbiterCallSeparate(cpArbiter* arb, cpSpace* space)
 {

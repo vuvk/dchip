@@ -27,8 +27,6 @@
 
     "dependencies": {
         "dchip": {"path": "../../", "version": "~master"},
-		"derelict-gl3" : "1.0.23",
-		"derelict-sdl2" : "2.0.0",
     },
 	
 

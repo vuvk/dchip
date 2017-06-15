@@ -24,7 +24,8 @@ module dchip.cpRotaryLimitJoint;
 import std.string;
 
 import dchip.constraints_util;
-import dchip.chipmunk;
+import dchip.chipmunk;
+import dchip.chipmunk_private;
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
 import dchip.cpBody;
@@ -44,10 +45,10 @@ import dchip.cpVect;
 
     cpFloat bias = 0;
     cpFloat jAcc = 0;
-}*/
+}
 
 mixin CP_DefineConstraintProperty!("cpRotaryLimitJoint", cpFloat, "min", "Min");
-mixin CP_DefineConstraintProperty!("cpRotaryLimitJoint", cpFloat, "max", "Max");
+mixin CP_DefineConstraintProperty!("cpRotaryLimitJoint", cpFloat, "max", "Max");*/
 
 void preStep(cpRotaryLimitJoint* joint, cpFloat dt)
 {

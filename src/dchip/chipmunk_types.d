@@ -156,6 +156,9 @@ alias cpGroup = uintptr_t;
 /// Type used for cpShape.layers.
 alias cpLayers = uint;
 
+/// Type used for cpShapeFilter category and mask.
+alias cpBitmask = uint;
+
 /// Type used for various timestamps in Chipmunk.
 alias cpTimestamp = uint;
 

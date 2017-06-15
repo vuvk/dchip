@@ -77,7 +77,8 @@ private:
     cpVect			mousePos_last;
 	
 	ulong			lastTime = 0;
-	ulong			curTime = 0;
+
+	ulong			curTime = 0;
 	float			deltaTime = 0f;
  
    	bool 	m_running = true;
@@ -213,8 +214,10 @@ private:
     ///
     public bool update() 
 	{
-		curTime = SDL_GetTicks();
-       	deltaTime = (curTime - lastTime) / 1000f;
+		curTime = SDL_GetTicks();
+
+       	deltaTime = (curTime - lastTime) / 1000f;
+
 		lastTime = curTime;
 		
         if(!m_running) return m_running;
@@ -265,13 +268,13 @@ version(TIME_TRIAL){}else
 
     cpVect mouseToSpace(int x, int y)
     {
-        GLdouble model[16];
+        GLdouble[16] model;
         glGetDoublev(GL_MODELVIEW_MATRIX, model.ptr);
 
-        GLdouble proj[16];
+        GLdouble[16] proj;
         glGetDoublev(GL_PROJECTION_MATRIX, proj.ptr);
 
-        GLint view[4];
+        GLint[4] view;
         glGetIntegerv(GL_VIEWPORT, view.ptr);
 
         GLdouble mx, my, mz;

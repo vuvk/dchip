@@ -56,28 +56,29 @@ shared static this()
     import dchip.cpSweep1D;
 
     _initModuleCtor_cpBBTree();
-    _initModuleCtor_cpCollision();    
+    _initModuleCtor_cpCollision();    
+
 	// TODO : DELETE
     //_initModuleCtor_cpDampedRotarySpring();
-    _initModuleCtor_cpDampedSpring();
-	// TODO : DELETE
-    //_initModuleCtor_cpGearJoint();
+    //_initModuleCtor_cpDampedSpring();
+	//_initModuleCtor_cpGearJoint();
     //_initModuleCtor_cpGrooveJoint(); 
 
 	//_initModuleCtor_cpPinJoint();   
     //_initModuleCtor_cpPivotJoint();
-    _initModuleCtor_cpPolyShape();
+    //_initModuleCtor_cpPolyShape();
 
 	// TODO : DELETE
     //_initModuleCtor_cpRatchetJoint();
 
     //_initModuleCtor_cpRotaryLimitJoint();
-    _initModuleCtor_cpShape();
+    //_initModuleCtor_cpShape();
 	// TODO : DELETE
     //_initModuleCtor_cpSimpleMotor();
     //_initModuleCtor_cpSlideJoint();
     _initModuleCtor_cpSpaceHash();
-    _initModuleCtor_cpSweep1D();
+    // TODO : DELETE
+    //_initModuleCtor_cpSweep1D();
 }
 
 /**
@@ -506,8 +507,8 @@ int cpConvexHull(int count, cpVect* verts, cpVect* result, int* first, cpFloat t
     if (first)
         (*first) = start;
     int resultCount = QHullReduce(tol, result + 2, count - 2, a, b, a, result + 1) + 1;
-    cpAssertSoft(cpPolyValidate(result, resultCount),
+    /*cpAssertSoft(cpPolyValidate(result, resultCount),
                  "Internal error: cpConvexHull() and cpPolyValidate() did not agree.\n" ~ 
-                 "Please report this error with as much info as you can.");
+                 "Please report this error with as much info as you can.");*/
     return resultCount;
 }

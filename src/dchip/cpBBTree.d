@@ -25,7 +25,8 @@ import core.stdc.stdlib : qsort;
 
 import dchip.chipmunk;
 import dchip.chipmunk_private;
-import dchip.chipmunk_types;
+import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpArray;
 import dchip.cpBB;
 import dchip.cpHashSet;

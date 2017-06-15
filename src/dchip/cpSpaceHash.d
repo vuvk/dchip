@@ -24,12 +24,12 @@ module dchip.cpSpaceHash;
 import dchip.cpBB;
 import dchip.chipmunk;
 import dchip.chipmunk_private;
-import dchip.chipmunk_types;
+import dchip.chipmunk_types;
+import dchip.chipmunk_structs;
 import dchip.cpArray;
 import dchip.cpHashSet;
 import dchip.prime;
 import dchip.cpSpatialIndex;
-import dchip.chipmunk_types;
 import dchip.cpVect;
 import dchip.util;
 

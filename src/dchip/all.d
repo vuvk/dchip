@@ -55,7 +55,9 @@ public
     import dchip.cpSpaceStep;
     import dchip.cpSpatialIndex;
     import dchip.cpSweep1D;
+	import dchip.cpRobust;
     import dchip.cpVect;
+	import dchip.cpTransform;
     import dchip.prime;
     import dchip.util;
 }

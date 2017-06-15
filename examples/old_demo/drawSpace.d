@@ -175,7 +175,7 @@ drawSegmentShape(cpBody *body_, cpSegmentShape *seg, cpSpace *space)
             cpVect d = cpvsub(b, a);
             cpVect r = cpvmult(d, seg.r/cpvlength(d));
 
-            GLfloat matrix[] = [
+            GLfloat[] matrix = [
                  r.x, r.y, 0.0f, 0.0f,
                 -r.y, r.x, 0.0f, 0.0f,
                  d.x, d.y, 0.0f, 0.0f,
@@ -264,8 +264,8 @@ enum int springVAR_count = springVAR.length / 2;
 static void
 drawSpring(cpDampedSpring *spring, cpBody *body_a, cpBody *body_b)
 {
-    cpVect a = cpvadd(body_a.p, cpvrotate(spring.anchr1, body_a.rot));
-    cpVect b = cpvadd(body_b.p, cpvrotate(spring.anchr2, body_b.rot));
+    cpVect a = cpvadd(body_a.p, cpvrotate(spring.anchorA, body_a.rot));
+    cpVect b = cpvadd(body_b.p, cpvrotate(spring.anchorB, body_b.rot));
 
     glPointSize(5.0f);
     glBegin(GL_POINTS); {
@@ -283,7 +283,7 @@ drawSpring(cpDampedSpring *spring, cpBody *body_a, cpBody *body_b)
         GLfloat sin = delta.y;
         GLfloat s = 1.0f/cpvlength(delta);
 
-        GLfloat matrix[] = [
+        GLfloat[] matrix = [
                  cos,    sin, 0.0f, 0.0f,
             -sin*s,  cos*s, 0.0f, 0.0f,
                 0.0f,   0.0f, 1.0f, 0.0f,
@@ -361,7 +361,7 @@ drawConstraint(cpConstraint *constraint)
             glVertex2f(a.x, a.y);
             glVertex2f(b.x, b.y);
         } glEnd();
-    } else if(klass == cpDampedSpringGetClass()){
+	} else if (cpConstraintIsDampedSpring (constraint)){
         drawSpring(cast(cpDampedSpring *)constraint, body_a, body_b);
     } else {
 //		printf("Cannot draw constraint\n");

@@ -24,7 +24,8 @@ module dchip.cpPivotJoint;
 import std.string;
 
 import dchip.constraints_util;
-import dchip.chipmunk;
+import dchip.chipmunk;
+import dchip.chipmunk_private;
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
 import dchip.cpBody;

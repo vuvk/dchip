@@ -22,7 +22,8 @@
 module dchip.cpConstraint;
 
 import std.string;
-
+
+
 import dchip.chipmunk;
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
@@ -110,18 +111,8 @@ alias cpConstraintPostSolveFunc = void function(cpConstraint* constraint, cpSpac
 }+/
 
 /// @private
-// TODO: 1. delete all from /*0*/ to /*1*/ (used in cpDampedRotarySpring.d, cpDampedSpring.d, but deprecated).
-// 		 2. move to chipmunk_private.d cpConstraintActivateBodies
-void cpConstraintActivateBodies(cpConstraint* constraint)
-{
-    cpBody* a = constraint.a;
-	if (a) cpBodyActivate(a);
-
-    cpBody* b = constraint.b;
-	if (b) cpBodyActivate(b);
-}
-/*0*/
-mixin template CP_DefineConstraintStructGetter(type, string member, string name)
+// TODO: DELETE
+/*mixin template CP_DefineConstraintStructGetter(type, string member, string name)
 {
     mixin(q{
         type cpConstraintGet%s(const cpConstraint * constraint) { return cast(typeof(return))constraint.%s; }
@@ -193,9 +184,7 @@ mixin template CP_DefineConstraintProperty(string struct_, type, string member, 
 {
     mixin CP_DefineConstraintGetter!(struct_, type, member, name);
     mixin CP_DefineConstraintSetter!(struct_, type, member, name);
-}
-/*1*/
-
+}*/
 
 void cpConstraintDestroy(cpConstraint* constraint)
 {

@@ -222,7 +222,7 @@ void cpSweep1DReindexQuery(cpSweep1D* sweep, cpSpatialIndexQueryFunc func, void*
 
     alias extern(C) int function(scope const void*, scope const void*) TableSortFunc;
 
-    qsort (table, count, TableCell.sizeof, safeCast!TableSortFunc(&TableSort));       // TODO use insertion sort instead
+    qsort (table, count, TableCell.sizeof, safeCast!TableSortFunc(&TableSort));       // TODO: use insertion sort instead
 
     for (int i = 0; i < count; i++)
     {
@@ -240,8 +240,25 @@ void cpSweep1DReindexQuery(cpSweep1D* sweep, cpSpatialIndexQueryFunc func, void*
     cpSpatialIndexCollideStatic(cast(cpSpatialIndex*)sweep, sweep.spatialIndex.staticIndex, func, data);
 }
 
-__gshared cpSpatialIndexClass klass;
+__gshared cpSpatialIndexClass klass = cpSpatialIndexClass(
+        cast(cpSpatialIndexDestroyImpl)&cpSweep1DDestroy,
 
+        cast(cpSpatialIndexCountImpl)&cpSweep1DCount,
+        cast(cpSpatialIndexEachImpl)&cpSweep1DEach,
+        cast(cpSpatialIndexContainsImpl)&cpSweep1DContains,
+
+        cast(cpSpatialIndexInsertImpl)&cpSweep1DInsert,
+        cast(cpSpatialIndexRemoveImpl)&cpSweep1DRemove,
+
+        cast(cpSpatialIndexReindexImpl)&cpSweep1DReindex,
+        cast(cpSpatialIndexReindexObjectImpl)&cpSweep1DReindexObject,
+        cast(cpSpatialIndexReindexQueryImpl)&cpSweep1DReindexQuery,
+
+        cast(cpSpatialIndexQueryImpl)&cpSweep1DQuery,
+        cast(cpSpatialIndexSegmentQueryImpl)&cpSweep1DSegmentQuery,
+    );
+
+/* TODO : DELETE
 void _initModuleCtor_cpSweep1D()
 {
     klass = cpSpatialIndexClass(
@@ -261,7 +278,7 @@ void _initModuleCtor_cpSweep1D()
         cast(cpSpatialIndexQueryImpl)&cpSweep1DQuery,
         cast(cpSpatialIndexSegmentQueryImpl)&cpSweep1DSegmentQuery,
     );
-}
+}*/
 
 cpSpatialIndexClass* Klass()
 {
