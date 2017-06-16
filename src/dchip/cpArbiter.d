@@ -23,7 +23,6 @@ module dchip.cpArbiter;
 
 import std.string;
 
-import dchip.cpBody;
 import dchip.chipmunk;
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
@@ -32,8 +31,11 @@ import dchip.constraints_util;
 import dchip.cpSpace;
 import dchip.cpSpatialIndex;
 import dchip.cpShape;
-import dchip.cpVect;
+import dchip.cpVect;
+import dchip.cpHashSet;
 import dchip.util;
+
+import dchip.cpBody;
 
 
 /// The cpArbiter struct tracks pairs of colliding shapes.
@@ -121,18 +123,18 @@ void cpArbiterUnthread(cpArbiter* arb)
 
 cpBool cpArbiterIsFirstContact(const cpArbiter* arb)
 {
-	return arb.state == CP_ARBITER_STATE_FIRST_COLLISION;
+	return arb.state == cpArbiterState.CP_ARBITER_STATE_FIRST_COLLISION;
 }
 
 cpBool cpArbiterIsRemoval(const cpArbiter* arb)
 {
-	return arb.state == CP_ARBITER_STATE_INVALIDATED;
+	return arb.state == cpArbiterState.CP_ARBITER_STATE_INVALIDATED;
 }
 
 int cpArbiterGetCount(const cpArbiter* arb)
 {
 	// Return 0 contacts if we are in a separate callback.
-	return (arb.state < CP_ARBITER_STATE_CACHED ? arb.count : 0);
+	return (arb.state < cpArbiterState.CP_ARBITER_STATE_CACHED ? arb.count : 0);
 }
 
 cpVect cpArbiterGetNormal(const cpArbiter* arb)
@@ -156,7 +158,7 @@ cpFloat cpArbiterGetDepth(const cpArbiter* arb, int i)
 {
 	cpAssertHard(0 <= i && i < cpArbiterGetCount(arb), "Index error: The specified contact index is invalid for this arbiter");
 	
-	cpContact* con = &arb.contacts[i];
+	cpContact* con = cast(cpContact*)&(arb.contacts[i]);
 	return cpvdot(cpvadd(cpvsub(con.r2, con.r1), cpvsub(arb.body_b.p, arb.body_a.p)), arb.n);
 }
 
@@ -204,7 +206,7 @@ void cpArbiterSetContactPointSet(cpArbiter* arb, cpContactPointSet* set)
 
 cpVect cpArbiterTotalImpulse(const cpArbiter* arb)
 {
-	cpContact* contacts = arb.contacts;
+	cpContact* contacts = cast(cpContact*)arb.contacts;
 	cpVect n = arb.n;
 	cpVect sum = cpvzero;
 	
@@ -215,7 +217,7 @@ cpVect cpArbiterTotalImpulse(const cpArbiter* arb)
 	}
 		
 	return (arb.swapped ? sum : cpvneg(sum));
-	return cpvzero;
+	/*return cpvzero;*/
 }
 
 cpFloat cpArbiterTotalKE(const cpArbiter* arb)
@@ -223,7 +225,7 @@ cpFloat cpArbiterTotalKE(const cpArbiter* arb)
 	cpFloat eCoef = (1 - arb.e)/(1 + arb.e);
 	cpFloat sum = 0.0;
 	
-	cpContact* contacts = arb.contacts;
+	cpContact* contacts = cast(cpContact*)arb.contacts;
 	for(int i=0, count=cpArbiterGetCount(arb); i<count; i++)
 	{
 		cpContact* con = &contacts[i];
@@ -238,7 +240,7 @@ cpFloat cpArbiterTotalKE(const cpArbiter* arb)
 
 cpBool cpArbiterIgnore(cpArbiter* arb)
 {
-	arb.state = CP_ARBITER_STATE_IGNORE;
+	arb.state = cpArbiterState.CP_ARBITER_STATE_IGNORE;
 	return cpFalse;
 }
 
@@ -274,7 +276,7 @@ void cpArbiterSetSurfaceVelocity(cpArbiter* arb, cpVect vr)
 
 cpDataPointer cpArbiterGetUserData(const cpArbiter* arb)
 {
-	return arb.data;
+	return cast(void*)arb.data;
 }
 
 void cpArbiterSetUserData(cpArbiter* arb, cpDataPointer userData)
@@ -296,11 +298,14 @@ void cpArbiterGetShapes(const cpArbiter* arb, cpShape** a, cpShape** b)
 	}
 }
 
-void cpArbiterGetBodies(const cpArbiter* arb, cpBody* *a, cpBody* *b)
+/// Return the colliding bodies involved for this arbiter.
+/// The order of the cpSpace.collision_type the bodies are associated with values will match
+/// the order set when the collision handler was registered.
+void cpArbiterGetBodies(const cpArbiter* arb, cpBody** a, cpBody** b)
 {
-	CP_ARBITER_GET_SHAPES(arb, shape_a, shape_b);
-	(*a) = shape_a.body_;
-	(*b) = shape_b.body_;
+    mixin(CP_ARBITER_GET_SHAPES!("arb", "shape_a", "shape_b"));
+    (*a) = shape_a.body_;
+    (*b) = shape_b.body_;
 }
 
 cpBool cpArbiterCallWildcardBeginA(cpArbiter* arb, cpSpace* space)
@@ -386,7 +391,7 @@ cpArbiter* cpArbiterInit(cpArbiter* arb, cpShape* a, cpShape* b)
 	arb.thread_b.prev = null;
 	
 	arb.stamp = 0;
-	arb.state = CP_ARBITER_STATE_FIRST_COLLISION;
+	arb.state = cpArbiterState.CP_ARBITER_STATE_FIRST_COLLISION;
 	
 	arb.data = null;
 	
@@ -395,14 +400,15 @@ cpArbiter* cpArbiterInit(cpArbiter* arb, cpShape* a, cpShape* b)
 
 static cpCollisionHandler* cpSpaceLookupHandler(cpSpace* space, cpCollisionType a, cpCollisionType b, cpCollisionHandler* defaultValue)
 {
-	cpCollisionType[] types = {a, b};
-	cpCollisionHandler* handler = cast(cpCollisionHandler*)cpHashSetFind(space.collisionHandlers, CP_HASH_PAIR(a, b), types);
+	cpCollisionType[] types = [a, b];
+	cpCollisionHandler* handler = cast(cpCollisionHandler*)cpHashSetFind(space.collisionHandlers, CP_HASH_PAIR(a, b), cast(void*)types);
 	return (handler ? handler : defaultValue);
 }
 
 void cpArbiterUpdate(cpArbiter* arb, cpCollisionInfo* info, cpSpace* space)
 {
-	immutable cpShape* a = info.a, b = info.b;
+	cpShape* a = info.a;
+	cpShape* b = info.b;
 	
 	// For collisions between two similar primitive types, the order could have been swapped since the last frame.
 	arb.a = a; arb.body_a = a.body_;
@@ -460,8 +466,8 @@ void cpArbiterUpdate(cpArbiter* arb, cpCollisionInfo* info, cpSpace* space)
 	}
 		
 	// mark it as new if it's been cached
-	if(arb.state == CP_ARBITER_STATE_CACHED) 
-		arb.state = CP_ARBITER_STATE_FIRST_COLLISION;
+	if(arb.state == cpArbiterState.CP_ARBITER_STATE_CACHED) 
+		arb.state = cpArbiterState.CP_ARBITER_STATE_FIRST_COLLISION;
 }
 
 void cpArbiterPreStep(cpArbiter* arb, cpFloat dt, cpFloat slop, cpFloat bias)

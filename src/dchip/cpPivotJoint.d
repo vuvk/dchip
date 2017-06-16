@@ -24,7 +24,8 @@ module dchip.cpPivotJoint;
 import std.string;
 
 import dchip.constraints_util;
-import dchip.chipmunk;
+import dchip.chipmunk;
+
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
@@ -63,15 +64,12 @@ void preStep(cpPivotJoint* joint, cpFloat dt)
     joint.r2 = cpvrotate(joint.anchr2, b.rot);
 	*/
 	
-	// TODO : UNCOMMENT AFTER ACTUALIZE cpBody, DELETE /*0*/
-	/*
 	joint.r1 = cpTransformVect(a.transform, cpvsub(joint.anchorA, a.cog));
 	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));
-	*/
-
-	/*0*/
+
+	/* TODO : DELETE
     joint.r1 = cpvrotate(joint.anchorA, a.rot);
-    joint.r2 = cpvrotate(joint.anchorB, b.rot);
+    joint.r2 = cpvrotate(joint.anchorB, b.rot);*/
 	
     // Calculate mass tensor
     joint.k = k_tensor(a, b, joint.r1, joint.r2);
@@ -184,11 +182,8 @@ cpConstraint* cpPivotJointNew2(cpBody* a, cpBody* b, cpVect anchorA, cpVect anch
 }*/
 cpConstraint* cpPivotJointNew(cpBody* a, cpBody* b, cpVect pivot)
 {
-	// TODO : CHANGE cpBodyWorld2Local to cpBodyWorldToLocal
-	/*cpVect anchorA = (a ? cpBodyWorldToLocal(a, pivot) : pivot);
-	cpVect anchorB = (b ? cpBodyWorldToLocal(b, pivot) : pivot);*/
-	cpVect anchorA = (a ? cpBodyWorld2Local(a, pivot) : pivot);
-	cpVect anchorB = (b ? cpBodyWorld2Local(b, pivot) : pivot);
+	cpVect anchorA = (a ? cpBodyWorldToLocal(a, pivot) : pivot);
+	cpVect anchorB = (b ? cpBodyWorldToLocal(b, pivot) : pivot);
 	return cpPivotJointNew2(a, b, anchorA, anchorB);
 }
 

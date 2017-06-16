@@ -79,6 +79,8 @@ else
     alias cpfceil = ceil;
 }
 
+enum CP_PI = cast(cpFloat)3.14159265358979323846264338327950288;
+
 ///
 enum CPFLOAT_MIN = cpFloat.min_normal;
 
@@ -166,8 +168,14 @@ alias cpTimestamp = uint;
 enum CP_NO_GROUP = 0;
 
 /// Value for cpShape.layers signifying that a shape is in every layer.
-enum CP_ALL_LAYERS = ~cast(cpLayers)0;
+enum CP_ALL_CATEGORIES = ~cast(cpBitmask)0;
 
+/// cpCollisionType value internally reserved for hashing wildcard handlers.
+enum CP_WILDCARD_COLLISION_TYPE = ~cast(cpCollisionType)0;
+
+/// Value for cpShape.layers signifying that a shape is in every layer.
+enum CP_ALL_LAYERS = ~cast(cpLayers)0;
+	
 /// Chipmunk's 2D vector type.
 struct cpVect
 {

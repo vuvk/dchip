@@ -25,7 +25,8 @@ import std.string;
 
 import dchip.constraints_util;
 import dchip.chipmunk;
-import dchip.chipmunk_private;
+import dchip.chipmunk_private;
+
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
 import dchip.cpBody;
@@ -68,27 +69,29 @@ void preStep(cpGrooveJoint* joint, cpFloat dt)
     cpBody* b = joint.constraint.b;
 
     // calculate endpoints in worldspace
-	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
+	// TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
 	cpVect ta = cpTransformPoint(a.transform, joint.grv_a);
-	cpVect tb = cpTransformPoint(a.transform, joint.grv_b);*/
-	/*0*/
+	cpVect tb = cpTransformPoint(a.transform, joint.grv_b);
+	/*0
     cpVect ta = cpBodyLocal2World(a, joint.grv_a);
-    cpVect tb = cpBodyLocal2World(a, joint.grv_b);
+    cpVect tb = cpBodyLocal2World(a, joint.grv_b);*/
 
-    // calculate axis
-	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
-	cpVect n = cpTransformVect(a.transform, joint.grv_n);*/	
-	/*0*/	
-	cpVect  n = cpvrotate(joint.grv_n, a.rot);
+    // calculate axis
+
+	// TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
+
+	cpVect n = cpTransformVect(a.transform, joint.grv_n);
+	/*0
+	cpVect  n = cpvrotate(joint.grv_n, a.rot);*/
     cpFloat d = cpvdot(ta, n);
 
     joint.grv_tn = n;
     /* TODO : DELETE
 	joint.r2     = cpvrotate(joint.anchr2, b.rot); */
-	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0* 	
-	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));*/
-	/*0*/
-	joint.r2 = cpvrotate (joint.anchorB, b.rot);
+	// TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0* 	
+	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));
+	/*0
+	joint.r2 = cpvrotate (joint.anchorB, b.rot);*/
 	
     // calculate tangential distance along the axis of r2
     cpFloat td = cpvcross(cpvadd(b.p, joint.r2), n);

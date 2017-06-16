@@ -24,13 +24,15 @@ module dchip.cpSlideJoint;
 import std.string;
 
 import dchip.constraints_util;
-import dchip.chipmunk;
+import dchip.chipmunk;
+
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
 import dchip.cpBody;
 import dchip.cpConstraint;
-import dchip.cpVect;
+import dchip.cpVect;
+import dchip.cpTransform;
 
 //~ const cpConstraintClass* cpSlideJointGetClass();
 
@@ -63,13 +65,13 @@ void preStep(cpSlideJoint* joint, cpFloat dt)
     /* TODO : DELETE
 	joint.r1 = cpvrotate(joint.anchr1, a.rot);
     joint.r2 = cpvrotate(joint.anchr2, b.rot);*/
-	/* TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE *0*
+	
 	joint.r1 = cpTransformVect(a.transform, cpvsub(joint.anchorA, a.cog));
 	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));
-	*/
-	/*0*/
+	
+	/* TODO : DELETE
 	joint.r1 = cpvrotate(joint.anchorA, a.rot);
-    joint.r2 = cpvrotate(joint.anchorB, b.rot);
+    joint.r2 = cpvrotate(joint.anchorB, b.rot);*/
 	
     cpVect  delta = cpvsub(cpvadd(b.p, joint.r2), cpvadd(a.p, joint.r1));
     cpFloat dist  = cpvlength(delta);

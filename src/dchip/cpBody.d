@@ -35,17 +35,664 @@ import dchip.cpShape;
 import dchip.cpSpace;
 import dchip.cpSpaceComponent;
 import dchip.cpVect;
+import dchip.cpTransform;
+import dchip.util;
+
+enum cpBodyType 
+{
+	/// A dynamic body is one that is affected by gravity, forces, and collisions.
+	/// This is the default body type.
+	CP_BODY_TYPE_DYNAMIC,
+	/// A kinematic body is an infinite mass, user controlled body that is not affected by gravity, forces or collisions.
+	/// Instead the body only moves based on it's velocity.
+	/// Dynamic bodies collide normally with kinematic bodies, though the kinematic body will be unaffected.
+	/// Collisions between two kinematic bodies, or a kinematic body and a static body produce collision callbacks, but no collision response.
+	CP_BODY_TYPE_KINEMATIC,
+	/// A static body is a body that never (or rarely) moves. If you move a static body, you must call one of the cpSpaceReindex*() functions.
+	/// Chipmunk uses this information to optimize the collision detection.
+	/// Static bodies do not produce collision callbacks when colliding with other static bodies.
+	CP_BODY_TYPE_STATIC,
+}
 
 /// Chipmunk's rigid body_ type. Rigid bodies hold the physical properties of an object like
 /// it's mass, and position and velocity of it's center of gravity. They don't have an shape on their own.
 /// They are given a shape by creating collision shapes (cpShape) that point to the body_.
 
 /// Rigid body_ velocity update function type.
-alias cpBodyVelocityFunc = void function(cpBody* bdy, cpVect gravity, cpFloat damping, cpFloat dt);
+alias cpBodyVelocityFunc = void function(cpBody* body_, cpVect gravity, cpFloat damping, cpFloat dt);
 
 /// Rigid body_ position update function type.
-alias cpBodyPositionFunc = void function(cpBody* bdy, cpFloat dt);
+alias cpBodyPositionFunc = void function(cpBody* body_, cpFloat dt);
 
+/// Body/shape iterator callback function type.
+alias cpBodyShapeIteratorFunc = void function(cpBody* body_, cpShape* shape, void* data);
+
+/// Body/constraint iterator callback function type.
+alias cpBodyConstraintIteratorFunc = void function(cpBody* body_, cpConstraint* constraint, void* data);
+
+/// Body/arbiter iterator callback function type.
+alias cpBodyArbiterIteratorFunc = void function(cpBody* body_, cpArbiter* arbiter, void* data);
+
+
+
+cpBody* cpBodyAlloc()
+{
+	return cast(cpBody*)cpcalloc(1, cpBody.sizeof);
+}
+
+cpBody* cpBodyInit(cpBody* body_, cpFloat mass, cpFloat moment)
+{
+	body_.space = null;
+	body_.shapeList = null;
+	body_.arbiterList = null;
+	body_.constraintList = null;
+	
+	body_.velocity_func = safeCast!cpBodyUpdateVelocityFunc(&cpBodyUpdateVelocity);
+	body_.position_func = safeCast!cpBodyUpdatePositionFunc(&cpBodyUpdatePosition);
+	
+	body_.sleeping.root = null;
+	body_.sleeping.next = null;
+	body_.sleeping.idleTime = 0.0f;
+	
+	body_.p = cpvzero;
+	body_.v = cpvzero;
+	body_.f = cpvzero;
+	
+	body_.w = 0.0f;
+	body_.t = 0.0f;
+	
+	body_.v_bias = cpvzero;
+	body_.w_bias = 0.0f;
+	
+	body_.userData = null;
+	
+	// Setters must be called after full initialization so the sanity checks don't assert on garbage data.
+	cpBodySetMass(body_, mass);
+	cpBodySetMoment(body_, moment);
+	cpBodySetAngle(body_, 0.0f);
+	
+	return body_;
+}
+
+cpBody* cpBodyNew(cpFloat mass, cpFloat moment)
+{
+	return cpBodyInit(cpBodyAlloc(), mass, moment);
+}
+
+cpBody* cpBodyNewKinematic()
+{
+	cpBody* body_ = cpBodyNew(0.0f, 0.0f);
+	cpBodySetType(body_, cpBodyType.CP_BODY_TYPE_KINEMATIC);
+	
+	return body_;
+}
+
+cpBody* cpBodyNewStatic()
+{
+	cpBody* body_ = cpBodyNew(0.0f, 0.0f);
+	cpBodySetType(body_, cpBodyType.CP_BODY_TYPE_STATIC);
+	
+	return body_;
+}
+
+void cpBodyDestroy(cpBody* body_){}
+
+void
+cpBodyFree(cpBody* body_)
+{
+	if(body_){
+		cpBodyDestroy(body_);
+		cpfree(body_);
+	}
+}
+
+/+#ifdef NDEBUG
+	#define	cpAssertSaneBody(body_)
+#else+/
+	static void cpv_assert_nan(cpVect v, string message)
+	{
+		cpAssertHard(v.x == v.x && v.y == v.y, message);
+	}
+	static void cpv_assert_infinite(cpVect v, string message)
+	{
+		cpAssertHard(cpfabs(v.x) != INFINITY && cpfabs(v.y) != INFINITY, message);
+	}
+	static void cpv_assert_sane(cpVect v, string message)
+	{
+		cpv_assert_nan(v, message); cpv_assert_infinite(v, message);
+	}
+	
+	static void cpBodySanityCheck(const cpBody* body_)
+	{
+		cpAssertHard(body_.m == body_.m && body_.m_inv == body_.m_inv, "Body's mass is NaN.");
+		cpAssertHard(body_.i == body_.i && body_.i_inv == body_.i_inv, "Body's moment is NaN.");
+		cpAssertHard(body_.m >= 0.0f, "Body's mass is negative.");
+		cpAssertHard(body_.i >= 0.0f, "Body's moment is negative.");
+		
+		cpv_assert_sane(body_.p, "Body's position is invalid.");
+		cpv_assert_sane(body_.v, "Body's velocity is invalid.");
+		cpv_assert_sane(body_.f, "Body's force is invalid.");
+
+		cpAssertHard(body_.a == body_.a && cpfabs(body_.a) != INFINITY, "Body's angle is invalid.");
+		cpAssertHard(body_.w == body_.w && cpfabs(body_.w) != INFINITY, "Body's angular velocity is invalid.");
+		cpAssertHard(body_.t == body_.t && cpfabs(body_.t) != INFINITY, "Body's torque is invalid.");
+	}
+	
+	static void cpAssertSaneBody(const cpBody* body_) 
+	{
+		cpBodySanityCheck(body_);
+	}
+//#endif
+
+cpBool cpBodyIsSleeping(const cpBody* body_)
+{
+	return (body_.sleeping.root != (cast(cpBody*)0));
+}
+
+cpBodyType cpBodyGetType(cpBody* body_)
+{
+	if(body_.sleeping.idleTime == INFINITY)
+	{
+		return cpBodyType.CP_BODY_TYPE_STATIC;
+	} 
+	else 
+		if(body_.m == INFINITY)
+		{
+			return cpBodyType.CP_BODY_TYPE_KINEMATIC;
+		} 
+		else 
+		{
+			return cpBodyType.CP_BODY_TYPE_DYNAMIC;
+		}
+}
+
+void cpBodySetType(cpBody* body_, cpBodyType type)
+{
+	cpBodyType oldType = cpBodyGetType(body_);
+	if(oldType == type) return;
+	
+	// Static bodies have their idle timers set to infinity.
+	// Non-static bodies should have their idle timer reset.
+	body_.sleeping.idleTime = (type == cpBodyType.CP_BODY_TYPE_STATIC ? INFINITY : 0.0f);
+	
+	if(type == cpBodyType.CP_BODY_TYPE_DYNAMIC)
+	{
+		body_.m = body_.i = 0.0f;
+		body_.m_inv = body_.i_inv = INFINITY;
+		
+		cpBodyAccumulateMassFromShapes(body_);
+	} 
+	else
+	{
+		body_.m = body_.i = INFINITY;
+		body_.m_inv = body_.i_inv = 0.0f;
+		
+		body_.v = cpvzero;
+		body_.w = 0.0f;
+	}
+	
+	// If the body is added to a space already, we'll need to update some space data structures.
+	cpSpace* space = cpBodyGetSpace(body_);
+	if(space != null)
+	{
+		cpAssertSpaceUnlocked(space);
+		
+		if(oldType == cpBodyType.CP_BODY_TYPE_STATIC)
+		{
+			// TODO This is probably not necessary
+//			cpBodyActivateStatic(body_, null);
+		} 
+		else 
+		{
+			cpBodyActivate(body_);
+		}
+		
+		// Move the bodies to the correct array.
+		cpArray* fromArray = cpSpaceArrayForBodyType(space, oldType);
+		cpArray* toArray = cpSpaceArrayForBodyType(space, type);
+		if(fromArray != toArray)
+		{
+			cpArrayDeleteObj(fromArray, body_);
+			cpArrayPush(toArray, body_);
+		}
+		
+		// Move the body's shapes to the correct spatial index.
+		cpSpatialIndex* fromIndex = (oldType == cpBodyType.CP_BODY_TYPE_STATIC ? space.staticShapes : space.dynamicShapes);
+		cpSpatialIndex* toIndex = (type == cpBodyType.CP_BODY_TYPE_STATIC ? space.staticShapes : space.dynamicShapes);
+		if(fromIndex != toIndex)
+		{			
+			mixin(CP_BODY_FOREACH_SHAPE!("body_", "shape", q{
+				cpSpatialIndexRemove(fromIndex, shape, shape.hashid); 
+				cpSpatialIndexInsert(toIndex, shape, shape.hashid);
+			}));
+		}
+	}
+}
+
+
+
+// Should* only* be called when shapes with mass info are modified, added or removed.
+void cpBodyAccumulateMassFromShapes(cpBody* body_)
+{
+	if(body_ == null || cpBodyGetType(body_) != cpBodyType.CP_BODY_TYPE_DYNAMIC) return;
+	
+	// Reset the body's mass data.
+	body_.m = body_.i = 0.0f;
+	body_.cog = cpvzero;
+	
+	// Cache the position to realign it at the end.
+	cpVect pos = cpBodyGetPosition(body_);
+	
+	// Accumulate mass from shapes.
+	/+
+	CP_BODY_FOREACH_SHAPE(body_, shape)
+	{
+		cpShapeMassInfo* info = &shape.massInfo;
+		cpFloat m = info.m;
+		
+		if(m > 0.0f)
+		{
+			cpFloat msum = body_.m + m;
+			
+			body_.i += m*info.i + cpvdistsq(body_.cog, info.cog)*(m*body__.m)/msum;
+			body_.cog = cpvlerp(body_.cog, info.cog, m/msum);
+			body_.m = msum;
+		}
+	}+/
+		
+	mixin(CP_BODY_FOREACH_SHAPE!("body_", "shape", q{
+		cpShapeMassInfo* info = &shape.massInfo;
+		cpFloat m = info.m;
+		
+		if(m > 0.0f)
+		{
+			cpFloat msum = body_.m + m;
+			
+			body_.i += m*info.i + cpvdistsq(body_.cog, info.cog)*(m*body__.m)/msum;
+			body_.cog = cpvlerp(body_.cog, info.cog, m/msum);
+			body_.m = msum;
+		}
+	}));
+	
+	// Recalculate the inverses.
+	body_.m_inv = 1.0f/body_.m;
+	body_.i_inv = 1.0f/body_.i;
+	
+	// Realign the body_ since the CoG has probably moved.
+	cpBodySetPosition(body_, pos);
+	cpAssertSaneBody(body_);
+}
+
+cpSpace* cpBodyGetSpace(const cpBody* body_)
+{
+	return cast(cpSpace*)body_.space;
+}
+
+cpFloat cpBodyGetMass(const cpBody* body_)
+{
+	return body_.m;
+}
+
+void cpBodySetMass(cpBody* body_, cpFloat mass)
+{
+	cpAssertHard(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_DYNAMIC, "You cannot set the mass of kinematic or static bodies.");
+	cpAssertHard(0.0f <= mass && mass < INFINITY, "Mass must be positive and finite.");
+	
+	cpBodyActivate(body_);
+	body_.m = mass;
+	body_.m_inv = 1.0f/mass;
+	cpAssertSaneBody(body_);
+}
+
+cpFloat cpBodyGetMoment(const cpBody* body_)
+{
+	return body_.i;
+}
+
+void cpBodySetMoment(cpBody* body_, cpFloat moment)
+{
+	cpAssertHard(moment >= 0.0f, "Moment of Inertia must be positive.");
+	
+	cpBodyActivate(body_);
+	body_.i = moment;
+	body_.i_inv = 1.0f/moment;
+	cpAssertSaneBody(body_);
+}
+
+cpVect cpBodyGetRotation(const cpBody* body_)
+{
+	return cpv(body_.transform.a, body_.transform.b);
+}
+
+void cpBodyAddShape(cpBody* body_, cpShape* shape)
+{
+	cpShape* next = body_.shapeList;
+	if(next) next.prev = shape;
+	
+	shape.next = next;
+	body_.shapeList = shape;
+	
+	if(shape.massInfo.m > 0.0f)
+	{
+		cpBodyAccumulateMassFromShapes(body_);
+	}
+}
+
+void cpBodyRemoveShape(cpBody* body_, cpShape* shape)
+{
+	cpShape* prev = shape.prev;
+	cpShape* next = shape.next;
+  
+	if(prev)
+	{
+		prev.next = next;
+	} 
+	else 
+	{
+		body_.shapeList = next;
+	}
+  
+	if(next)
+	{
+		next.prev = prev;
+	}
+  
+	shape.prev = null;
+	shape.next = null;
+	
+	if(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_DYNAMIC && shape.massInfo.m > 0.0f)
+	{
+		cpBodyAccumulateMassFromShapes(body_);
+	}
+}
+
+static cpConstraint* filterConstraints(cpConstraint* node, cpBody* body_, cpConstraint* filter)
+{
+	if(node == filter)
+	{
+		return cpConstraintNext(node, body_);
+	} 
+	else 
+		if(node.a == body_)
+		{
+			node.next_a = filterConstraints(node.next_a, body_, filter);
+		} 
+		else 
+		{
+			node.next_b = filterConstraints(node.next_b, body_, filter);
+		}
+	
+	return node;
+}
+
+void cpBodyRemoveConstraint(cpBody* body_, cpConstraint* constraint)
+{
+	body_.constraintList = filterConstraints(body_.constraintList, body_, constraint);
+}
+
+// 'p' is the position of the CoG
+static void SetTransform(cpBody* body_, cpVect p, cpFloat a)
+{
+	cpVect rot = cpvforangle(a);
+	cpVect c = body_.cog;
+	
+	body_.transform = cpTransformNewTranspose(
+		rot.x, -rot.y, p.x - (c.x*rot.x - c.y*rot.y),
+		rot.y,  rot.x, p.y - (c.x*rot.y + c.y*rot.x)
+	);
+}
+
+static cpFloat SetAngle(cpBody* body_, cpFloat a)
+{
+	body_.a = a;
+	cpAssertSaneBody(body_);
+	
+	return a;
+}
+
+cpVect cpBodyGetPosition(const cpBody* body_)
+{
+	return cpTransformPoint(body_.transform, cpvzero);
+}
+
+void cpBodySetPosition(cpBody* body_, cpVect position)
+{
+	cpBodyActivate(body_);
+	cpVect p = body_.p = cpvadd(cpTransformVect(body_.transform, body_.cog), position);
+	cpAssertSaneBody(body_);
+	
+	SetTransform(body_, p, body_.a);
+}
+
+cpVect cpBodyGetCenterOfGravity(const cpBody* body_)
+{
+	return body_.cog;
+}
+
+void cpBodySetCenterOfGravity(cpBody* body_, cpVect cog)
+{
+	cpBodyActivate(body_);
+	body_.cog = cog;
+	cpAssertSaneBody(body_);
+}
+
+cpVect cpBodyGetVelocity(const cpBody* body_)
+{
+	return body_.v;
+}
+
+void cpBodySetVelocity(cpBody* body_, cpVect velocity)
+{
+	cpBodyActivate(body_);
+	body_.v = velocity;
+	cpAssertSaneBody(body_);
+}
+
+cpVect cpBodyGetForce(const cpBody* body_)
+{
+	return body_.f;
+}
+
+void cpBodySetForce(cpBody* body_, cpVect force)
+{
+	cpBodyActivate(body_);
+	body_.f = force;
+	cpAssertSaneBody(body_);
+}
+
+cpFloat cpBodyGetAngle(const cpBody* body_)
+{
+	return body_.a;
+}
+
+void cpBodySetAngle(cpBody* body_, cpFloat angle)
+{
+	cpBodyActivate(body_);
+	SetAngle(body_, angle);
+	
+	SetTransform(body_, body_.p, angle);
+}
+
+cpFloat cpBodyGetAngularVelocity(const cpBody* body_)
+{
+	return body_.w;
+}
+
+void cpBodySetAngularVelocity(cpBody* body_, cpFloat angularVelocity)
+{
+	cpBodyActivate(body_);
+	body_.w = angularVelocity;
+	cpAssertSaneBody(body_);
+}
+
+cpFloat cpBodyGetTorque(const cpBody* body_)
+{
+	return body_.t;
+}
+
+void cpBodySetTorque(cpBody* body_, cpFloat torque)
+{
+	cpBodyActivate(body_);
+	body_.t = torque;
+	cpAssertSaneBody(body_);
+}
+
+cpDataPointer cpBodyGetUserData(const cpBody* body_)
+{
+	return cast(cpDataPointer)body_.userData;
+}
+
+void cpBodySetUserData(cpBody* body_, cpDataPointer userData)
+{
+	body_.userData = userData;
+}
+
+void cpBodySetVelocityUpdateFunc(cpBody* body_, cpBodyVelocityFunc velocityFunc)
+{
+	body_.velocity_func = velocityFunc;
+}
+
+void cpBodySetPositionUpdateFunc(cpBody* body_, cpBodyPositionFunc positionFunc)
+{
+	body_.position_func = positionFunc;
+}
+
+alias cpBodyUpdateVelocityFunc = void function(cpBody* body_, cpVect gravity, cpFloat damping, cpFloat dt);
+
+void cpBodyUpdateVelocity(cpBody* body_, cpVect gravity, cpFloat damping, cpFloat dt)
+{
+	// Skip kinematic bodies.
+	if(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_KINEMATIC) return;
+	
+	cpAssertSoft(body_.m > 0.0f && body_.i > 0.0f, "Body's mass and moment must be positive to simulate. (Mass: %f Moment: %f)", body_.m, body_.i);
+	
+	body_.v = cpvadd(cpvmult(body_.v, damping), cpvmult(cpvadd(gravity, cpvmult(body_.f, body_.m_inv)), dt));
+	body_.w = body_.w*damping + body_.t*body__.i_inv*dt;
+	
+	// Reset forces.
+	body_.f = cpvzero;
+	body_.t = 0.0f;
+	
+	cpAssertSaneBody(body_);
+}
+
+alias cpBodyUpdatePositionFunc = void function(cpBody* body_, cpFloat dt);
+
+void cpBodyUpdatePosition(cpBody* body_, cpFloat dt)
+{
+	cpVect p = body_.p = cpvadd(body_.p, cpvmult(cpvadd(body_.v, body_.v_bias), dt));
+	cpFloat a = SetAngle(body_, body_.a + (body_.w + body_.w_bias)*dt);
+	SetTransform(body_, p, a);
+	
+	body_.v_bias = cpvzero;
+	body_.w_bias = 0.0f;
+	
+	cpAssertSaneBody(body_);
+}
+
+cpVect cpBodyLocalToWorld(const cpBody* body_, const cpVect point)
+{
+	return cpTransformPoint(body_.transform, point);
+}
+
+cpVect cpBodyWorldToLocal(const cpBody* body_, const cpVect point)
+{
+	return cpTransformPoint(cpTransformRigidInverse(body_.transform), point);
+}
+
+void cpBodyApplyForceAtWorldPoint(cpBody* body_, cpVect force, cpVect point)
+{
+	cpBodyActivate(body_);
+	body_.f = cpvadd(body_.f, force);
+	
+	cpVect r = cpvsub(point, cpTransformPoint(body_.transform, body_.cog));
+	body_.t += cpvcross(r, force);
+}
+
+void cpBodyApplyForceAtLocalPoint(cpBody* body_, cpVect force, cpVect point)
+{
+	cpBodyApplyForceAtWorldPoint(body_, cpTransformVect(body_.transform, force), cpTransformPoint(body_.transform, point));
+}
+
+void cpBodyApplyImpulseAtWorldPoint(cpBody* body_, cpVect impulse, cpVect point)
+{
+	cpBodyActivate(body_);
+	
+	cpVect r = cpvsub(point, cpTransformPoint(body_.transform, body_.cog));
+	apply_impulse(body_, impulse, r);
+}
+
+void cpBodyApplyImpulseAtLocalPoint(cpBody* body_, cpVect impulse, cpVect point)
+{
+	cpBodyApplyImpulseAtWorldPoint(body_, cpTransformVect(body_.transform, impulse), cpTransformPoint(body_.transform, point));
+}
+
+cpVect cpBodyGetVelocityAtLocalPoint(const cpBody* body_, cpVect point)
+{
+	cpVect r = cpTransformVect(body_.transform, cpvsub(point, body_.cog));
+	return cpvadd(body_.v, cpvmult(cpvperp(r), body_.w));
+}
+
+cpVect cpBodyGetVelocityAtWorldPoint(const cpBody* body_, cpVect point)
+{
+	cpVect r = cpvsub(point, cpTransformPoint(body_.transform, body_.cog));
+	return cpvadd(body_.v, cpvmult(cpvperp(r), body_.w));
+}
+
+cpFloat cpBodyKineticEnergy(const cpBody* body_)
+{
+	// Need to do some fudging to avoid NaNs
+	cpFloat vsq = cpvdot(body_.v, body_.v);
+	cpFloat wsq = body_.w*body__.w;
+	return (vsq ? vsq*body__.m : 0.0f) + (wsq ? wsq*body__.i : 0.0f);
+}
+
+void cpBodyEachShape(cpBody* body_, cpBodyShapeIteratorFunc func, void* data)
+{
+	cpShape* shape = body_.shapeList;
+	while(shape)
+	{
+		cpShape* next = shape.next;
+		func(body_, shape, data);
+		shape = next;
+	}
+}
+
+void cpBodyEachConstraint(cpBody* body_, cpBodyConstraintIteratorFunc func, void* data)
+{
+	cpConstraint* constraint = body_.constraintList;
+	while(constraint)
+	{
+		cpConstraint* next = cpConstraintNext(constraint, body_);
+		func(body_, constraint, data);
+		constraint = next;
+	}
+}
+
+void cpBodyEachArbiter(cpBody* body_, cpBodyArbiterIteratorFunc func, void* data)
+{
+	cpArbiter* arb = body_.arbiterList;
+	while(arb)
+	{
+		cpArbiter* next = cpArbiterNext(arb, body_);
+		
+		cpBool swapped = arb.swapped; {
+			arb.swapped = (body_ == arb.body_b);
+			func(body_, arb, data);
+		} arb.swapped = swapped;
+		
+		arb = next;
+	}
+}
+
+
+
+
+
+
+
+
+/+ TODO : DELETE
 /// Used internally to track information on the collision graph.
 /// @private
 struct cpComponentNode
@@ -159,8 +806,9 @@ version (CHIP_ENABLE_WARNINGS)
 else
 {
     void cpBodyAssertSane(T)(T bdy) { }
-}
+}+/
 
+/* TODO : DELETE
 // Defined in cpSpace.c
 /// Wake up a sleeping or idle body_.
 void cpBodyActivate(cpBody* body_)
@@ -179,8 +827,9 @@ void cpBodyActivate(cpBody* body_)
         if (!cpBodyIsStatic(other))
             other.node.idleTime = 0.0f;
     }));
-}
+}*/
 
+/* TODO : DELETE
 /// Wake up any sleeping or idle bodies touching a static body_.
 void cpBodyActivateStatic(cpBody* body_, cpShape* filter)
 {
@@ -194,8 +843,9 @@ void cpBodyActivateStatic(cpBody* body_, cpShape* filter)
     }));
 
     // TODO should also activate joints?
-}
+}*/
 
+/* TODO : DELETE
 /// Force a body_ to fall asleep immediately.
 void cpBodySleep(cpBody* body_)
 {
@@ -238,8 +888,9 @@ void cpBodySleepWithGroup(cpBody* body_, cpBody* group)
     }
 
     cpArrayDeleteObj(space.bodies, body_);
-}
+}*/
 
+/+ TODO : DELETE
 /// Returns true if the body_ is sleeping.
 cpBool cpBodyIsSleeping(const cpBody* bdy)
 {
@@ -262,14 +913,14 @@ cpBool cpBodyIsRogue(const cpBody* bdy)
 mixin template CP_DefineBodyStructGetter(type, string member, string name)
 {
     mixin(q{
-        type cpBodyGet%s(const cpBody * bdy) { return cast(typeof(return))bdy.%s; }
+        type cpBodyGet%s(const cpBody*  bdy) { return cast(typeof(return))bdy.%s; }
     }.format(name, member));
 }
 
 mixin template CP_DefineBodyStructSetter(type, string member, string name)
 {
     mixin(q{
-        void cpBodySet%s(cpBody * bdy, const type value)
+        void cpBodySet%s(cpBody*  bdy, const type value)
         {
             cpBodyActivate(bdy);
             bdy.%s = cast(typeof(bdy.%s))value;
@@ -321,8 +972,8 @@ cpFloat cpBodyKineticEnergy(const cpBody* bdy)
 {
     // Need to do some fudging to avoid NaNs
     cpFloat vsq = cpvdot(bdy.v, bdy.v);
-    cpFloat wsq = bdy.w * bdy.w;
-    return (vsq ? vsq * bdy.m : 0.0f) + (wsq ? wsq * bdy.i : 0.0f);
+    cpFloat wsq = bdy.w*  bdy.w;
+    return (vsq ? vsq*  bdy.m : 0.0f) + (wsq ? wsq*  bdy.i : 0.0f);
 }
 
 /// Body/shape iterator callback function type.
@@ -551,7 +1202,7 @@ void cpBodyUpdateVelocity(cpBody* body_, cpVect gravity, cpFloat damping, cpFloa
     body_.v = cpvclamp(cpvadd(cpvmult(body_.v, damping), cpvmult(cpvadd(gravity, cpvmult(body_.f, body_.m_inv)), dt)), body_.v_limit);
 
     cpFloat w_limit = body_.w_limit;
-    body_.w = cpfclamp(body_.w * damping + body_.t * body_.i_inv * dt, -w_limit, w_limit);
+    body_.w = cpfclamp(body_.w*  damping + body_.t*  body_.i_inv*  dt, -w_limit, w_limit);
 
     cpBodySanityCheck(body_);
 }
@@ -559,7 +1210,7 @@ void cpBodyUpdateVelocity(cpBody* body_, cpVect gravity, cpFloat damping, cpFloa
 void cpBodyUpdatePosition(cpBody* body_, cpFloat dt)
 {
     body_.p = cpvadd(body_.p, cpvmult(cpvadd(body_.v, body_.v_bias), dt));
-    setAngle(body_, body_.a + (body_.w + body_.w_bias) * dt);
+    setAngle(body_, body_.a + (body_.w + body_.w_bias)*  dt);
 
     body_.v_bias = cpvzero;
     body_.w_bias = 0.0f;
@@ -641,6 +1292,7 @@ void cpBodyEachArbiter(cpBody* body_, cpBodyArbiterIteratorFunc func, void* data
     }
 }
 
+/* TODO : DELETE
 void cpBodyPushArbiter(cpBody* body_, cpArbiter* arb)
 {
     cpAssertSoft(cpArbiterThreadForBody(arb, body_).next == null, "Internal Error: Dangling contact graph pointers detected. (A)");
@@ -653,10 +1305,11 @@ void cpBodyPushArbiter(cpBody* body_, cpArbiter* arb)
     if (next)
         cpArbiterThreadForBody(next, body_).prev = arb;
     body_.arbiterList = arb;
-}
+}*/
 
-/** Workaround for https://github.com/slembcke/Chipmunk2D/issues/56. */
+/** Workaround for https://github.com/slembcke/Chipmunk2D/issues/56.* /
 void cpBodyActivateWrap(cpBody* body_, void* data)
 {
     cpBodyActivate(body_);
 }
++/

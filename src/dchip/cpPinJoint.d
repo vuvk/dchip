@@ -24,7 +24,8 @@ module dchip.cpPinJoint;
 import std.string;
 
 import dchip.constraints_util;
-import dchip.chipmunk;
+import dchip.chipmunk;
+
 import dchip.chipmunk_private;
 import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
@@ -65,11 +66,11 @@ void preStep(cpPinJoint* joint, cpFloat dt)
     joint.r2 = cpvrotate(joint.anchr2, b.rot);*/
 	
 	// TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE /*0*/
-	/*joint.r1 = cpTransformVect(a.transform, cpvsub(joint.anchorA, a.cog));
-	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));*/
-	/*0*/
+	joint.r1 = cpTransformVect(a.transform, cpvsub(joint.anchorA, a.cog));
+	joint.r2 = cpTransformVect(b.transform, cpvsub(joint.anchorB, b.cog));
+	/*0
 	joint.r1 = cpvrotate(joint.anchorA, a.rot);
-    joint.r2 = cpvrotate(joint.anchorB, b.rot);
+    joint.r2 = cpvrotate(joint.anchorB, b.rot);*/
 
     cpVect  delta = cpvsub(cpvadd(b.p, joint.r2), cpvadd(a.p, joint.r1));
     cpFloat dist  = cpvlength(delta);
@@ -166,16 +167,13 @@ cpPinJoint* cpPinJointInit(cpPinJoint* joint, cpBody* a, cpBody* b, cpVect ancho
 	joint.anchorA = anchorA;
 	joint.anchorB = anchorB;
 		
-	// TODO : UNCOMMENT AFTER ACTUALIZE cpBody.d and DELETE /*0*/
-	/+  
-
 	// STATIC_BODY_CHECK
 	cpVect p1 = (a ? cpTransformPoint(a.transform, anchorA) : anchorA);
-	cpVect p2 = (b ? cpTransformPoint(b.transform, anchorB) : anchorB);+/
-
-	/*0*/
-    cpVect p1 = (a ? cpvadd(a.p, cpvrotate(anchorA, a.rot)) : anchorA);
-    cpVect p2 = (b ? cpvadd(b.p, cpvrotate(anchorB, b.rot)) : anchorB);
+	cpVect p2 = (b ? cpTransformPoint(b.transform, anchorB) : anchorB);
+
+	// TODO : DELETE
+    /*cpVect p1 = (a ? cpvadd(a.p, cpvrotate(anchorA, a.rot)) : anchorA);
+    cpVect p2 = (b ? cpvadd(b.p, cpvrotate(anchorB, b.rot)) : anchorB);*/
 	
     joint.dist = cpvlength(cpvsub(p2, p1));
 

@@ -21,6 +21,9 @@
  */
 module dchip.cpPolyShape;
 
+
+import core.stdc.stdlib : alloca;
+
 import dchip.cpBB;
 import dchip.cpBody;
 import dchip.chipmunk;
@@ -29,6 +32,10 @@ import dchip.chipmunk_types;
 import dchip.chipmunk_structs;
 import dchip.cpShape;
 import dchip.cpVect;
+
+import dchip.cpTransform;
+
+import dchip.util;
 
 /// @private
 /* TODO : DELETE
@@ -172,9 +179,10 @@ static void cpPolyShapeSegmentQuery(cpPolyShape* poly, cpVect a, cpVect b, cpFlo
 	{
 		for(int i=0; i<count; i++)
 		{
-			cpSegmentQueryInfo circle_info = {NULL, b, cpvzero, 1.0f};
+			cpSegmentQueryInfo circle_info = {null, b, cpvzero, 1.0f};
 			CircleSegmentQuery(&poly.shape, planes[i].v0, r, a, b, r2, &circle_info);
-			if(circle_info.alpha < info.alpha) (*info) = circle_info;
+			if(circle_info.alpha < info.alpha) 
+				(*info) = circle_info;
 		}
 	}
 }
@@ -184,7 +192,7 @@ static void SetVerts(cpPolyShape* poly, int count, const cpVect* verts)
 	poly.count = count;
 	if(count <= CP_POLY_SHAPE_INLINE_ALLOC)
 	{
-		poly.planes = poly._planes;
+		poly.planes = cast(cpSplittingPlane*)poly._planes;
 	} 
 	else 
 	{
@@ -233,7 +241,7 @@ cpPolyShape* cpPolyShapeInit(cpPolyShape* poly, cpBody* body_, int count, const 
 	for(int i=0; i<count; i++) 
 		hullVerts[i] = cpTransformPoint(transform, verts[i]);
 	
-	uint hullCount = cpConvexHull(count, hullVerts, hullVerts, NULL, 0.0);
+	uint hullCount = cpConvexHull(count, hullVerts, hullVerts, null, 0.0);
 	return cpPolyShapeInitRaw(poly, body_, hullCount, hullVerts, radius);
 }
 
@@ -251,7 +259,7 @@ cpPolyShape* cpPolyShapeInitRaw(cpPolyShape* poly, cpBody* body_, int count, con
 
 /// Allocate and initialize a polygon shape with rounded corners.
 /// A convex hull will be created from the vertexes.
-cpShape* cpPolyShapeNew(cpBody* body_, int numVerts, const cpVect* verts, cpVect offset, cpFloat radius)
+cpShape* cpPolyShapeNew(cpBody* body_, int count, const cpVect* verts, cpTransform transform, cpFloat radius)
 {
 	return cast(cpShape*)cpPolyShapeInit(cpPolyShapeAlloc(), body_, count, verts, transform, radius);
 }
@@ -269,20 +277,20 @@ cpPolyShape* cpBoxShapeInit(cpPolyShape* poly, cpBody* body_, cpFloat width, cpF
     cpFloat hw = width / 2.0f;
     cpFloat hh = height / 2.0f;
 
-    return cpBoxShapeInit2(poly, body_, cpBBNew(-hw, -hh, hw, hh));
+    return cpBoxShapeInit2(poly, body_, cpBBNew(-hw, -hh, hw, hh), radius);
 }
 
 /// Initialize an offset box shaped polygon shape with rounded corners.
 cpPolyShape*  cpBoxShapeInit2(cpPolyShape* poly, cpBody* body_, cpBB box, cpFloat radius)
 {
-	cpVect[] verts = {
+	cpVect[] verts = [
 		cpv(box.r, box.b),
 		cpv(box.r, box.t),
 		cpv(box.l, box.t),
 		cpv(box.l, box.b),
-	};
+	];
 	
-	return cpPolyShapeInitRaw(poly, body_, 4, verts, radius);
+	return cpPolyShapeInitRaw(poly, body_, 4, cast(cpVect*)verts, radius);
 }
 
 /// Allocate and initialize a box shaped polygon shape.
@@ -332,7 +340,7 @@ void cpPolyShapeSetVerts(cpShape* shape, int count, cpVect* verts, cpTransform t
 	for(int i=0; i<count; i++) 
 		hullVerts[i] = cpTransformPoint(transform, verts[i]);
 	
-	uint hullCount = cpConvexHull(count, hullVerts, hullVerts, NULL, 0.0);
+	uint hullCount = cpConvexHull(count, hullVerts, hullVerts, null, 0.0);
 	cpPolyShapeSetVertsRaw(shape, hullCount, hullVerts);
 }
 

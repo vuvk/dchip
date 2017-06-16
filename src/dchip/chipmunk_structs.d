@@ -26,13 +26,16 @@ module dchip.chipmunk_structs;
 
 import std.string;
 
-import dchip.cpBody;
 import dchip.chipmunk;
 import dchip.chipmunk_types;
-import dchip.cpSpace;
 
+import dchip.cpSpace;
+import dchip.cpSpaceStep;
 import dchip.cpShape;
-
+
+import dchip.cpBody;
+import dchip.cpHashSet;
+import dchip.cpSpatialIndex;
 import dchip.cpBB;
 import dchip.cpConstraint;
 
@@ -42,18 +45,19 @@ struct cpArray
 	void** arr;
 };
 
-/*struct cpBody {
+struct cpBody 
+{
 	// Integration functions
 	cpBodyVelocityFunc velocity_func;
 	cpBodyPositionFunc position_func;
 	
 	// mass and it's inverse
-	cpFloat m;
-	cpFloat m_inv;
+	cpFloat m = 0;
+	cpFloat m_inv = 0;
 	
 	// moment of inertia and it's inverse
-	cpFloat i;
-	cpFloat i_inv;
+	cpFloat i = 0;
+	cpFloat i_inv = 0;
 	
 	// center of gravity
 	cpVect cog;
@@ -64,9 +68,9 @@ struct cpArray
 	cpVect f;
 	
 	// Angle, angular velocity, torque (radians)
-	cpFloat a;
-	cpFloat w;
-	cpFloat t;
+	cpFloat a = 0;
+	cpFloat w = 0;
+	cpFloat t = 0;
 	
 	cpTransform transform;
 	
@@ -77,18 +81,19 @@ struct cpArray
 	cpVect v_bias;
 	cpFloat w_bias;
 	
-	cpSpace *space;
+	cpSpace* space;
 	
-	cpShape *shapeList;
-	cpArbiter *arbiterList;
-	cpConstraint *constraintList;
+	cpShape* shapeList;
+	cpArbiter* arbiterList;
+	cpConstraint* constraintList;
 	
-	struct {
-		cpBody *root;
-		cpBody *next;
+	struct sleeping
+	{
+		cpBody* root;
+		cpBody* next;
 		cpFloat idleTime;
-	} sleeping;
-};*/
+	}
+}
 
 enum cpArbiterState
 {
@@ -476,59 +481,61 @@ struct cpSimpleMotor
 	cpFloat jAcc = 0;
 }
 
-/*typedef struct cpContactBufferHeader cpContactBufferHeader;
-typedef void (*cpSpaceArbiterApplyImpulseFunc)(cpArbiter *arb);
+//typedef struct cpContactBufferHeader cpContactBufferHeader;
+alias cpSpaceArbiterApplyImpulseFunc = void function(cpArbiter* arb);
 
-struct cpSpace {
-	int iterations;
+struct cpSpace 
+{
+	int iterations = 0;
 	
 	cpVect gravity;
-	cpFloat damping;
+	cpFloat damping = 0;
 	
-	cpFloat idleSpeedThreshold;
-	cpFloat sleepTimeThreshold;
+	cpFloat idleSpeedThreshold = 0;
+	cpFloat sleepTimeThreshold = 0;
 	
-	cpFloat collisionSlop;
-	cpFloat collisionBias;
+	cpFloat collisionSlop = 0;
+	cpFloat collisionBias = 0;
 	cpTimestamp collisionPersistence;
 	
 	cpDataPointer userData;
 	
 	cpTimestamp stamp;
-	cpFloat curr_dt;
+	cpFloat curr_dt = 0;
 
-	cpArray *dynamicBodies;
-	cpArray *staticBodies;
-	cpArray *rousedBodies;
-	cpArray *sleepingComponents;
+	cpArray* dynamicBodies;
+	cpArray* staticBodies;
+	cpArray* rousedBodies;
+	cpArray* sleepingComponents;
 	
 	cpHashValue shapeIDCounter;
-	cpSpatialIndex *staticShapes;
-	cpSpatialIndex *dynamicShapes;
+	cpSpatialIndex* staticShapes;
+	cpSpatialIndex* dynamicShapes;
 	
-	cpArray *constraints;
+	cpArray* constraints;
 	
-	cpArray *arbiters;
-	cpContactBufferHeader *contactBuffersHead;
-	cpHashSet *cachedArbiters;
-	cpArray *pooledArbiters;
+	cpArray* arbiters;
+	cpContactBufferHeader* contactBuffersHead;
+	cpHashSet* cachedArbiters;
+	cpArray* pooledArbiters;
 	
-	cpArray *allocatedBuffers;
-	unsigned int locked;
+	cpArray* allocatedBuffers;
+	uint locked = 0;
 	
-	cpBool usesWildcards;
-	cpHashSet *collisionHandlers;
+	cpBool usesWildcards = false;
+	cpHashSet* collisionHandlers;
 	cpCollisionHandler defaultHandler;
 	
-	cpBool skipPostStep;
-	cpArray *postStepCallbacks;
+	cpBool skipPostStep = false;
+	cpArray* postStepCallbacks;
 	
-	cpBody *staticBody;
+	cpBody* staticBody;
 	cpBody _staticBody;
-};
+}
 
-typedef struct cpPostStepCallback {
+struct cpPostStepCallback 
+{
 	cpPostStepFunc func;
-	void *key;
-	void *data;
-} cpPostStepCallback;*/
+	void* key;
+	void* data;
+} 

@@ -38,6 +38,7 @@ import dchip.cpSpaceComponent;
 import dchip.cpSpatialIndex;
 import dchip.util;
 
+
 cpPostStepCallback* cpSpaceGetPostStepCallback(cpSpace* space, void* key)
 {
     cpArray* arr = space.postStepCallbacks;
@@ -57,6 +58,12 @@ void PostStepDoNothing(cpSpace* space, void* obj, void* data)
 {
 }
 
+/// Post Step callback function type.
+alias cpPostStepFunc = void function(cpSpace* space, void* key, void* data);
+/// Schedule a post-step callback to be called when cpSpaceStep() finishes.
+/// You can only register one callback per unique value for @c key.
+/// Returns true only if @c key has never been scheduled before.
+/// It's possible to pass @c null for @c func if you only want to mark @c key as being used.
 cpBool cpSpaceAddPostStepCallback(cpSpace* space, cpPostStepFunc func, void* key, void* data)
 {
     cpAssertWarn(space.locked,
@@ -115,8 +122,8 @@ void cpSpaceUnlock(cpSpace* space, cpBool runPostStep)
                 cpPostStepFunc func = callback.func;
 
                 // Mark the func as null in case calling it calls cpSpaceRunPostStepCallbacks() again.
-                // TODO need more tests around this case I think.
-                callback.func = null;
+                // TODO: need more tests around this case I think.
+				callback.func = null;
 
                 if (func)
                     func(space, callback.key, callback.data);
@@ -232,6 +239,21 @@ void* cpSpaceArbiterSetTrans(cpShape** shapes, cpSpace* space)
     return cpArbiterInit(cast(cpArbiter*)cpArrayPop(space.pooledArbiters), shapes[0], shapes[1]);
 }
 
+static cpBool QueryRejectConstraint(cpBody* a, cpBody* b)
+{
+	mixin(CP_BODY_FOREACH_CONSTRAINT!("a", "constraint", q{        
+		if(
+			!constraint.collideBodies && (
+				(constraint.a == a && constraint.b == b) ||
+				(constraint.a == b && constraint.b == a)
+			)
+		) return cpTrue;
+	}));	
+	
+	return cpFalse;
+}
+
+/* TODO : DELETE
 cpBool queryReject(cpShape* a, cpShape* b)
 {
     return (
@@ -251,9 +273,24 @@ cpBool queryReject(cpShape* a, cpShape* b)
         // Don't collide infinite mass objects
         || (a.body_.m == INFINITY && b.body_.m == INFINITY)
         );
+}*/
+
+static cpBool QueryReject(cpShape* a, cpShape* b)
+{
+	return (
+		// BBoxes must overlap
+		!cpBBIntersects(a.bb, b.bb)
+		// Don't collide shapes attached to the same body.
+		|| a.body_ == b.body_
+		// Don't collide shapes that are filtered.
+		|| cpShapeFilterReject(a.filter, b.filter)
+		// Don't collide bodies if they have a constraint with collideBodies == cpFalse.
+		|| QueryRejectConstraint(a.body_, b.body_)
+	);
 }
 
 // Callback from the spatial hash.
+/+ TODO : DELETE
 cpCollisionID cpSpaceCollideShapes(cpShape* a, cpShape* b, cpCollisionID id, cpSpace* space)
 {
     // Reject any of the simple cases
@@ -332,6 +369,65 @@ cpCollisionID cpSpaceCollideShapes(cpShape* a, cpShape* b, cpCollisionID id, cpS
     // Time stamp the arbiter so we know it was used recently.
     arb.stamp = space.stamp;
     return id;
+}+/
+cpCollisionID cpSpaceCollideShapes(cpShape* a, cpShape* b, cpCollisionID id, cpSpace* space)
+{
+	// Reject any of the simple cases
+	if(QueryReject(a,b)) return id;
+	
+	// Narrow-phase collision detection.
+	cpCollisionInfo info = cpCollide(a, b, id, cpContactBufferGetArray(space));
+	
+	if(info.count == 0) return info.id; // Shapes are not colliding.
+	cpSpacePushContacts(space, info.count);
+	
+	// Get an arbiter from space.arbiterSet for the two shapes.
+	// This is where the persistant contact magic comes from.
+	cpShape*[] shape_pair = {info.a, info.b};
+	cpHashValue arbHashID = CP_HASH_PAIR(cast(cpHashValue)info.a, cast(cpHashValue)info.b);
+	cpArbiter* arb = cast(cpArbiter*)cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair, safeCast!cpHashSetTransFunc(cpSpaceArbiterSetTrans), space);
+	cpArbiterUpdate(arb, &info, space);
+	
+	cpCollisionHandler* handler = arb.handler;
+	
+	// Call the begin function first if it's the first step
+	if(arb.state == CP_ARBITER_STATE_FIRST_COLLISION && !handler.beginFunc(arb, space, handler.userData))
+	{
+		cpArbiterIgnore(arb); // permanently ignore the collision until separation
+	}
+	
+	if(
+		// Ignore the arbiter if it has been flagged
+		(arb.state != CP_ARBITER_STATE_IGNORE) && 
+		// Call preSolve
+		handler.preSolveFunc(arb, space, handler.userData) &&
+		// Check (again) in case the pre-solve() callback called cpArbiterIgnored().
+		arb.state != CP_ARBITER_STATE_IGNORE &&
+		// Process, but don't add collisions for sensors.
+		!(a.sensor || b.sensor) &&
+		// Don't process collisions between two infinite mass bodies.
+		// This includes collisions between two kinematic bodies, or a kinematic body and a static body.
+		!(a.body_.m == INFINITY && b.body_.m == INFINITY)
+	)
+	{
+		cpArrayPush(space.arbiters, arb);
+	} 
+	else 
+	{
+		cpSpacePopContacts(space, info.count);
+		
+		arb.contacts = null;
+		arb.count = 0;
+		
+		// Normally arbiters are set as used after calling the post-solve callback.
+		// However, post-solve() callbacks are not called for sensors or arbiters rejected from pre-solve.
+		if(arb.state != CP_ARBITER_STATE_IGNORE) 
+			arb.state = CP_ARBITER_STATE_NORMAL;
+	}
+	
+	// Time stamp the arbiter so we know it was used recently.
+	arb.stamp = space.stamp;
+	return info.id;
 }
 
 // Hashset filter func to throw away old arbiters.
@@ -342,28 +438,42 @@ cpBool cpSpaceArbiterSetFilter(cpArbiter* arb, cpSpace* space)
     cpBody* a = arb.body_a;
     cpBody* b = arb.body_b;
 
-    // TODO should make an arbiter state for this so it doesn't require filtering arbiters for dangling body pointers on body removal.
-    // Preserve arbiters on sensors and rejected arbiters for sleeping objects.
+    // TODO: should make an arbiter state for this so it doesn't require filtering arbiters for dangling body pointers on body removal.
+	// Preserve arbiters on sensors and rejected arbiters for sleeping objects.
     // This prevents errant separate callbacks from happenening.
-    if (
+    /* TODO : DELETE
+	if (
         (cpBodyIsStatic(a) || cpBodyIsSleeping(a)) &&
         (cpBodyIsStatic(b) || cpBodyIsSleeping(b))
-        )
+        )*/
+	if(
+		(cpBodyGetType(a) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(a)) &&
+		(cpBodyGetType(b) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(b))
+	)
     {
         return cpTrue;
     }
 
     // Arbiter was used last frame, but not this one
-    if (ticks >= 1 && arb.state != cpArbiterStateCached)
+    /* TODO : DELETE
+	if (ticks >= 1 && arb.state != cpArbiterStateCached)
     {
         arb.state = cpArbiterStateCached;
         cpArbiterCallSeparate(arb, space);
-    }
+    }*/
+	if(ticks >= 1 && arb.state != CP_ARBITER_STATE_CACHED)
+	{
+		arb.state = CP_ARBITER_STATE_CACHED;
+		cpCollisionHandler* handler = arb.handler;
+		handler.separateFunc(arb, space, handler.userData);
+	}
 
     if (ticks >= space.collisionPersistence)
     {
         arb.contacts    = null;
-        arb.numContacts = 0;
+        /* TODO : DELETE
+		arb.numContacts = 0;*/
+		arb.count = 0;
 
         cpArrayPush(space.pooledArbiters, arb);
         return cpFalse;
@@ -376,8 +486,10 @@ cpBool cpSpaceArbiterSetFilter(cpArbiter* arb, cpSpace* space)
 
 void cpShapeUpdateFunc(cpShape* shape, void* unused)
 {
+	/* TODO : DELETE
     cpBody* body_ = shape.body_;
-    cpShapeUpdate(shape, body_.p, body_.rot);
+    cpShapeUpdate(shape, body_.p, body_.rot);*/
+	cpShapeCacheBB(shape);
 }
 
 void cpSpaceStep(cpSpace* space, cpFloat dt)
@@ -391,7 +503,9 @@ void cpSpaceStep(cpSpace* space, cpFloat dt)
     cpFloat prev_dt = space.curr_dt;
     space.curr_dt = dt;
 
-    cpArray* bodies      = space.bodies;
+	/* TODO : DELETE
+    cpArray* bodies      = space.bodies;*/
+	cpArray* bodies      = space.dynamicBodies;
     cpArray* constraints = space.constraints;
     cpArray* arbiters    = space.arbiters;
 
@@ -399,7 +513,9 @@ void cpSpaceStep(cpSpace* space, cpFloat dt)
     for (int i = 0; i < arbiters.num; i++)
     {
         cpArbiter* arb = cast(cpArbiter*)arbiters.arr[i];
-        arb.state = cpArbiterStateNormal;
+        /* TODO : DELETE
+		arb.state = cpArbiterStateNormal;*/
+		arb.state = CP_ARBITER_STATE_NORMAL;
 
         // If both bodies are awake, unthread the arbiter from the contact graph.
         if (!cpBodyIsSleeping(arb.body_a) && !cpBodyIsSleeping(arb.body_b))
@@ -421,8 +537,11 @@ void cpSpaceStep(cpSpace* space, cpFloat dt)
 
         // Find colliding pairs.
         cpSpacePushFreshContactBuffer(space);
+		/* TODO : DELETE
         cpSpatialIndexEach(space.activeShapes, safeCast!cpSpatialIndexIteratorFunc(&cpShapeUpdateFunc), null);
-        cpSpatialIndexReindexQuery(space.activeShapes, safeCast!cpSpatialIndexQueryFunc(&cpSpaceCollideShapes), space);
+        cpSpatialIndexReindexQuery(space.activeShapes, safeCast!cpSpatialIndexQueryFunc(&cpSpaceCollideShapes), space);*/
+        cpSpatialIndexEach(space.dynamicShapes, safeCast!cpSpatialIndexIteratorFunc(&cpShapeUpdateFunc), null);
+        cpSpatialIndexReindexQuery(space.dynamicShapes, safeCast!cpSpatialIndexQueryFunc(&cpSpaceCollideShapes), space);
     }
     cpSpaceUnlock(space, cpFalse);
 
@@ -511,7 +630,9 @@ void cpSpaceStep(cpSpace* space, cpFloat dt)
             cpArbiter* arb = cast(cpArbiter*)arbiters.arr[i];
 
             cpCollisionHandler* handler = arb.handler;
-            handler.postSolve(arb, space, handler.data);
+            /* TODO : DELETE
+			handler.postSolve(arb, space, handler.data);*/
+            handler.postSolve(arb, space, handler.userData);
         }
     }
     cpSpaceUnlock(space, cpTrue);

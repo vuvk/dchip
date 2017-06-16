@@ -31,6 +31,7 @@ import dchip.cpVect;
 // I'm not sure if this should be part of the private API or not.
 // I should probably clean up the naming conventions if it is...
 
+/+ TODO : DELETE
 cpVect relative_velocity(cpBody* a, cpBody* b, cpVect r1, cpVect r2)
 {
     cpVect v1_sum = cpvadd(a.v, cpvmult(cpvperp(r1), a.w));
@@ -124,4 +125,4 @@ cpMat2x2 k_tensor(cpBody* a, cpBody* b, cpVect r1, cpVect r2)
 cpFloat bias_coef(cpFloat errorBias, cpFloat dt)
 {
     return 1.0f - cpfpow(errorBias, dt);
-}
+}+/

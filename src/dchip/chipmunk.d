@@ -81,6 +81,13 @@ shared static this()
     //_initModuleCtor_cpSweep1D();
 }
 
+static cpVect cpClosetPointOnSegment(const cpVect p, const cpVect a, const cpVect b)
+{
+	cpVect delta = cpvsub(a, b);
+	cpFloat t = cpfclamp01(cpvdot(delta, cpvsub(p, b))/cpvlengthsq(delta));
+	return cpvadd(b, cpvmult(delta, t));
+}
+
 /**
     Workaround for a linker bug with RDMD local imports:
     http://d.puremagic.com/issues/show_bug.cgi?id=7016
@@ -277,10 +284,13 @@ cpFloat cpAreaForCircle(cpFloat r1, cpFloat r2)
 
 /// Calculate the moment of inertia for a line segment.
 /// Beveling radius is not supported.
-cpFloat cpMomentForSegment(cpFloat m, cpVect a, cpVect b)
+cpFloat cpMomentForSegment(cpFloat m, cpVect a, cpVect b, cpFloat r)
 {
-    cpVect offset = cpvmult(cpvadd(a, b), 0.5f);
-    return m * (cpvdistsq(b, a) / 12.0f + cpvlengthsq(offset));
+	cpVect offset = cpvlerp(a, b, 0.5f);
+	
+	// This approximates the shape as a box for rounded segments, but it's quite close.
+	cpFloat length = cpvdist(b, a) + 2.0f*r;
+	return m*((length*length + 4.0f*r*r)/12.0f + cpvlengthsq(offset));
 }
 
 /// Calculate the area of a fattened (capsule shaped) line segment.
@@ -290,6 +300,7 @@ cpFloat cpAreaForSegment(cpVect a, cpVect b, cpFloat r)
 }
 
 /// Calculate the moment of inertia for a solid polygon shape assuming it's center of gravity is at it's centroid. The offset is added to each vertex.
+/* TODO : DELETE
 cpFloat cpMomentForPoly(cpFloat m, const int numVerts, const cpVect* verts, cpVect offset)
 {
     if (numVerts == 2)
@@ -311,20 +322,46 @@ cpFloat cpMomentForPoly(cpFloat m, const int numVerts, const cpVect* verts, cpVe
     }
 
     return (m * sum1) / (6.0f * sum2);
+}*/
+
+cpFloat cpMomentForPoly(cpFloat m, const int count, const cpVect* verts, cpVect offset, cpFloat r)
+{
+	// TODO account for radius.
+	if(count == 2) return cpMomentForSegment(m, verts[0], verts[1], 0.0f);
+	
+	cpFloat sum1 = 0.0f;
+	cpFloat sum2 = 0.0f;
+	for(int i=0; i<count; i++)
+	{
+		cpVect v1 = cpvadd(verts[i], offset);
+		cpVect v2 = cpvadd(verts[(i+1)%count], offset);
+		
+		cpFloat a = cpvcross(v2, v1);
+		cpFloat b = cpvdot(v1, v1) + cpvdot(v1, v2) + cpvdot(v2, v2);
+		
+		sum1 += a*b;
+		sum2 += a;
+	}
+	
+	return (m*sum1)/(6.0f*sum2);
 }
 
 /// Calculate the signed area of a polygon. A Clockwise winding gives positive area.
 /// This is probably backwards from what you expect, but matches Chipmunk's the winding for poly shapes.
-cpFloat cpAreaForPoly(const int numVerts, const cpVect* verts)
+cpFloat cpAreaForPoly(const int count, const cpVect* verts, cpFloat r)
 {
-    cpFloat area = 0.0f;
-
-    for (int i = 0; i < numVerts; i++)
-    {
-        area += cpvcross(verts[i], verts[(i + 1) % numVerts]);
-    }
-
-    return -area / 2.0f;
+	cpFloat area = 0.0f;
+	cpFloat perimeter = 0.0f;
+	for(int i=0; i<count; i++)
+	{
+		cpVect v1 = verts[i];
+		cpVect v2 = verts[(i+1)%count];
+		
+		area += cpvcross(v1, v2);
+		perimeter += cpvdist(v1, v2);
+	}
+	
+	return r*(CP_PI*cpfabs(r) + perimeter) + area/2.0f;
 }
 
 void cpLoopIndexes(cpVect* verts, int count, int* start, int* end)
@@ -469,7 +506,7 @@ cpFloat cpMomentForBox2(cpFloat m, cpBB box)
 }
 
 /// Calculate the convex hull of a given set of points. Returns the count of points in the hull.
-/// @c result must be a pointer to a @c cpVect array with at least @c count elements. If @c result is @c NULL, then @c verts will be reduced instead.
+/// @c result must be a pointer to a @c cpVect array with at least @c count elements. If @c result is @c null, then @c verts will be reduced instead.
 /// @c first is an optional pointer to an integer to store where the first vertex in the hull came from (i.e. verts[first] == result[0])
 /// @c tol is the allowed amount to shrink the hull when simplifying it. A tolerance of 0.0 creates an exact hull.
 /// QuickHull seemed like a neat algorithm, and efficient-ish for large input sets.

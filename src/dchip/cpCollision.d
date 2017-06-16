@@ -172,7 +172,7 @@ static SupportPoint PolySupportPoint(const cpPolyShape* poly, const cpVect n)
     int i = PolySupportPointIndex(poly.numVerts, verts, n);
     return SupportPointNew(verts[i], i);*/
 	
-	immutable cpSplittingPlane* planes = poly.planes;
+	cpSplittingPlane* planes = cast(cpSplittingPlane*)poly.planes;
 	int i = PolySupportPointIndex(poly.count, planes, n);
 	return SupportPointNew(planes[i].v0, i);
 }
@@ -263,7 +263,7 @@ static Edge SupportEdgeForPoly(const cpPolyShape* poly, const cpVect n)
 	int i0 = (i1 - 1 + count)%count;
 	int i2 = (i1 + 1)%count;
 	
-	immutable cpSplittingPlane* planes = poly.planes;
+	cpSplittingPlane* planes = cast(cpSplittingPlane*)poly.planes;
 	cpHashValue hashid = poly.shape.hashid;
 	if(cpvdot(n, planes[i1].n) > cpvdot(n, planes[i2].n))
 	{
@@ -692,7 +692,7 @@ static ClosestPoints GJK(const SupportContext* ctx, cpCollisionID* id)
 	}
 	 
 	cpVect *hullVerts = alloca(mdiffCount*sizeof(cpVect));
-	int hullCount = cpConvexHull(mdiffCount, mdiffVerts, hullVerts, NULL, 0.0);
+	int hullCount = cpConvexHull(mdiffCount, mdiffVerts, hullVerts, null, 0.0);
 	
 	ChipmunkDebugDrawPolygon(hullCount, hullVerts, 0.0, RGBAColor(1, 0, 0, 1), RGBAColor(1, 0, 0, 0.25));
 #endif +/
@@ -1221,7 +1221,8 @@ int cpCollideShapes(const cpShape* a, const cpShape* b, cpCollisionID* id, cpCon
     return numContacts;
 }*/
 
-cpCollisionInfo cpCollide(const cpShape* a, const cpShape* b, cpCollisionID id, cpContact* contacts)
+/// Note: This function returns contact points with r1/r2 in absolute coordinates, not body relative.
+cpCollisionInfo cpCollide(cpShape* a, cpShape* b, cpCollisionID id, cpContact* contacts)
 {
 	cpCollisionInfo info = {a, b, id, cpvzero, 0, contacts};
 	
@@ -1232,7 +1233,7 @@ cpCollisionInfo cpCollide(const cpShape* a, const cpShape* b, cpCollisionID id, 
 		info.b = a;
 	}
 	
-	CollisionFuncs[info.a.klass.type + info.b.klass.type*CP_NUM_SHAPES](info.a, info.b, &info);
+	CollisionFuncs[info.a.klass.type + info.b.klass.type*cpShapeType.CP_NUM_SHAPES](info.a, info.b, &info);
 	
 //	if(0){
 //		for(int i=0; i<info.count; i++){

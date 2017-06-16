@@ -28,6 +28,12 @@ import dchip.chipmunk_structs;
 import dchip.cpArray;
 import dchip.prime;
 
+
+alias cpHashSetEqlFunc = cpBool function(void* ptr, void* elt);
+alias cpHashSetTransFunc = void* function(void* ptr, void* data);
+alias cpHashSetIteratorFunc = void function(void* elt, void* data);
+alias cpHashSetFilterFunc = cpBool function(void* elt, void* data);
+
 struct cpHashSetBin
 {
     void* elt;
