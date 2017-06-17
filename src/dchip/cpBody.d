@@ -36,6 +36,7 @@ import dchip.cpSpace;
 import dchip.cpSpaceComponent;
 import dchip.cpVect;
 import dchip.cpTransform;
+import dchip.cpSpatialIndex;
 import dchip.util;
 
 enum cpBodyType 
@@ -308,7 +309,7 @@ void cpBodyAccumulateMassFromShapes(cpBody* body_)
 		{
 			cpFloat msum = body_.m + m;
 			
-			body_.i += m*info.i + cpvdistsq(body_.cog, info.cog)*(m*body__.m)/msum;
+			body_.i += m*info.i + cpvdistsq(body_.cog, info.cog)*(m*body_.m)/msum;
 			body_.cog = cpvlerp(body_.cog, info.cog, m/msum);
 			body_.m = msum;
 		}
@@ -567,7 +568,7 @@ void cpBodyUpdateVelocity(cpBody* body_, cpVect gravity, cpFloat damping, cpFloa
 	cpAssertSoft(body_.m > 0.0f && body_.i > 0.0f, "Body's mass and moment must be positive to simulate. (Mass: %f Moment: %f)", body_.m, body_.i);
 	
 	body_.v = cpvadd(cpvmult(body_.v, damping), cpvmult(cpvadd(gravity, cpvmult(body_.f, body_.m_inv)), dt));
-	body_.w = body_.w*damping + body_.t*body__.i_inv*dt;
+	body_.w = body_.w*damping + body_.t*body_.i_inv*dt;
 	
 	// Reset forces.
 	body_.f = cpvzero;
@@ -643,8 +644,8 @@ cpFloat cpBodyKineticEnergy(const cpBody* body_)
 {
 	// Need to do some fudging to avoid NaNs
 	cpFloat vsq = cpvdot(body_.v, body_.v);
-	cpFloat wsq = body_.w*body__.w;
-	return (vsq ? vsq*body__.m : 0.0f) + (wsq ? wsq*body__.i : 0.0f);
+	cpFloat wsq = body_.w*body_.w;
+	return (vsq ? vsq*body_.m : 0.0f) + (wsq ? wsq*body_.i : 0.0f);
 }
 
 void cpBodyEachShape(cpBody* body_, cpBodyShapeIteratorFunc func, void* data)

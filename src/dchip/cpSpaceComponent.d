@@ -46,7 +46,7 @@ void cpSpaceActivateBody(cpSpace* space, cpBody* body_)
 {
 	/* TODO : DELETE
     cpAssertHard(!cpBodyIsRogue(body_), "Internal error: Attempting to activate a rogue body_.");*/
-	cpAssertHard(cpBodyGetType(body_) == CP_BODY_TYPE_DYNAMIC, "Internal error: Attempting to activate a non-dynamic body.");
+	cpAssertHard(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_DYNAMIC, "Internal error: Attempting to activate a non-dynamic body.");
 	
     if (space.locked)
     {
@@ -105,7 +105,7 @@ void cpSpaceActivateBody(cpSpace* space, cpBody* body_)
 
                 cpfree(contacts);
             }*/
-			if(body_ == bodyA || cpBodyGetType(bodyA) == CP_BODY_TYPE_STATIC)
+			if(body_ == bodyA || cpBodyGetType(bodyA) == cpBodyType.CP_BODY_TYPE_STATIC)
 			{
 				int numContacts = arb.count;
 				cpContact* contacts = arb.contacts;
@@ -120,7 +120,7 @@ void cpSpaceActivateBody(cpSpace* space, cpBody* body_)
 				cpShape* b = arb.b;
 				cpShape*[] shape_pair = [a, b];
 				cpHashValue arbHashID = CP_HASH_PAIR(cast(cpHashValue)a, cast(cpHashValue)b);
-				cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair, null, arb);
+				cpHashSetInsert(space.cachedArbiters, arbHashID, cast(cpDataPointer)shape_pair, null, arb);
 				
 				// Update the arbiter's state
 				arb.stamp = space.stamp;
@@ -136,7 +136,7 @@ void cpSpaceActivateBody(cpSpace* space, cpBody* body_)
 			/* TODO : DELETE
             if (body_ == bodyA || cpBodyIsStatic(bodyA))
                 cpArrayPush(space.constraints, constraint);*/
-			if(body_ == bodyA || cpBodyGetType(bodyA) == CP_BODY_TYPE_STATIC) 
+			if(body_ == bodyA || cpBodyGetType(bodyA) == cpBodyType.CP_BODY_TYPE_STATIC) 
 				cpArrayPush(space.constraints, constraint);
         }));
     }
@@ -148,7 +148,7 @@ void cpSpaceDeactivateBody(cpSpace* space, cpBody* body_)
     cpAssertHard(!cpBodyIsRogue(body_), "Internal error: Attempting to deactivate a rouge body_.");
 	cpArrayDeleteObj(space.bodies, body_);*/
 	
-	cpAssertHard(cpBodyGetType(body_) == CP_BODY_TYPE_DYNAMIC, "Internal error: Attempting to deactivate a non-dynamic body.");
+	cpAssertHard(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_DYNAMIC, "Internal error: Attempting to deactivate a non-dynamic body.");
 	cpArrayDeleteObj(space.dynamicBodies, body_);	
 
     mixin(CP_BODY_FOREACH_SHAPE!("body_", "shape", q{	
@@ -170,7 +170,7 @@ void cpSpaceDeactivateBody(cpSpace* space, cpBody* body_)
             memcpy(contacts, arb.contacts, bytes);
             arb.contacts = contacts;
         }*/
-		if(body_ == bodyA || cpBodyGetType(bodyA) == CP_BODY_TYPE_STATIC){
+		if(body_ == bodyA || cpBodyGetType(bodyA) == cpBodyType.CP_BODY_TYPE_STATIC){
 			cpSpaceUncacheArbiter(space, arb);
 			
 			// Save contact values to a new block of memory so they won't time out
@@ -187,7 +187,7 @@ void cpSpaceDeactivateBody(cpSpace* space, cpBody* body_)
 		/* TODO : DELETE
         if (body_ == bodyA || cpBodyIsStatic(bodyA))
             cpArrayDeleteObj(space.constraints, constraint);*/
-		if(body_ == bodyA || cpBodyGetType(bodyA) == CP_BODY_TYPE_STATIC) 
+		if(body_ == bodyA || cpBodyGetType(bodyA) == cpBodyType.CP_BODY_TYPE_STATIC) 
 			cpArrayDeleteObj(space.constraints, constraint);	
     }));
 }
@@ -227,7 +227,7 @@ void ComponentActivate(cpBody* root)
 /// Wake up a sleeping or idle body_.
 void cpBodyActivate(cpBody* body_)
 {
-	if(body_ != null && cpBodyGetType(body_) == CP_BODY_TYPE_DYNAMIC)
+	if(body_ != null && cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_DYNAMIC)
 	{
 		body_.sleeping.idleTime = 0.0f;
 		
@@ -235,20 +235,20 @@ void cpBodyActivate(cpBody* body_)
 		if(root && cpBodyIsSleeping(root))
 		{
 			// TODO should cpBodyIsSleeping(root) be an assertion?
-			cpAssertSoft(cpBodyGetType(root) == CP_BODY_TYPE_DYNAMIC, "Internal Error: Non-dynamic body component root detected.");
+			cpAssertSoft(cpBodyGetType(root) == cpBodyType.CP_BODY_TYPE_DYNAMIC, "Internal Error: Non-dynamic body component root detected.");
 			
 			cpSpace* space = root.space;
-			cpBody* body_ = root;
-			while(body_)
+			cpBody* bdy = root;
+			while(bdy)
 			{
-				cpBody* next = body_.sleeping.next;
+				cpBody* next = bdy.sleeping.next;
 				
-				body_.sleeping.idleTime = 0.0f;
-				body_.sleeping.root = null;
-				body_.sleeping.next = null;
+				bdy.sleeping.idleTime = 0.0f;
+				bdy.sleeping.root = null;
+				bdy.sleeping.next = null;
 				cpSpaceActivateBody(space, body_);
 				
-				body_ = next;
+				bdy = next;
 			}
 			
 			cpArrayDeleteObj(space.sleepingComponents, root);
@@ -258,7 +258,7 @@ void cpBodyActivate(cpBody* body_)
 			// Reset the idle timer of things the body is touching as well.
 			// That way things don't get left hanging in the air.
 			cpBody* other = (arb.body_a == body_ ? arb.body_b : arb.body_a);
-			if(cpBodyGetType(other) != CP_BODY_TYPE_STATIC) 
+			if(cpBodyGetType(other) != cpBodyType.CP_BODY_TYPE_STATIC) 
 				other.sleeping.idleTime = 0.0f;
 		}));
 	}
@@ -267,7 +267,7 @@ void cpBodyActivate(cpBody* body_)
 /// Wake up any sleeping or idle bodies touching a static body_.
 void cpBodyActivateStatic(cpBody* body_, cpShape* filter)
 {
-    cpAssertHard(cpBodyGetType(body_) == CP_BODY_TYPE_STATIC, "cpBodyActivateStatic() called on a non-static body.");
+    cpAssertHard(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_STATIC, "cpBodyActivateStatic() called on a non-static body.");
 	
     mixin(CP_BODY_FOREACH_ARBITER!("body_", "arb", q{
         if (!filter || filter == arb.a || filter == arb.b)
@@ -313,7 +313,7 @@ static void FloodFillComponent(cpBody* root, cpBody* body_)
 	
 	// Kinematic bodies cannot be put to sleep and prevent bodies they are touching from sleeping.
 	// Static bodies are effectively sleeping all the time.
-	if(cpBodyGetType(body_) == CP_BODY_TYPE_DYNAMIC)
+	if(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_DYNAMIC)
 	{
         cpBody* other_root = ComponentRoot(body_);
 
@@ -374,7 +374,7 @@ void cpSpaceProcessComponents(cpSpace* space, cpFloat dt)
             body_.node.idleTime = (cpBodyKineticEnergy(body_) > keThreshold ? 0.0f : body_.node.idleTime + dt);*/
 			
 			// TODO should make a separate array for kinematic bodies.
-			if(cpBodyGetType(body_) != CP_BODY_TYPE_DYNAMIC) continue;
+			if(cpBodyGetType(body_) != cpBodyType.CP_BODY_TYPE_DYNAMIC) continue;
 			
 			// Need to deal with infinite mass objects
 			cpFloat keThreshold = (dvsq ? body_.m*dvsq : 0.0f);
@@ -401,9 +401,9 @@ void cpSpaceProcessComponents(cpSpace* space, cpFloat dt)
                 cpBodyActivate(b);*/
 			
 			// TODO checking cpBodyIsSleepin() redundant?
-			if(cpBodyGetType(b) == CP_BODY_TYPE_KINEMATIC || cpBodyIsSleeping(a)) 
+			if(cpBodyGetType(b) == cpBodyType.CP_BODY_TYPE_KINEMATIC || cpBodyIsSleeping(a)) 
 				cpBodyActivate(a);
-			if(cpBodyGetType(a) == CP_BODY_TYPE_KINEMATIC || cpBodyIsSleeping(b)) 
+			if(cpBodyGetType(a) == cpBodyType.CP_BODY_TYPE_KINEMATIC || cpBodyIsSleeping(b)) 
 				cpBodyActivate(b);		
         }
 
@@ -428,9 +428,9 @@ void cpSpaceProcessComponents(cpSpace* space, cpFloat dt)
             if (cpBodyIsRogue(a) && !cpBodyIsStatic(a))
                 cpBodyActivate(b);*/
 				
-			if(cpBodyGetType(b) == CP_BODY_TYPE_KINEMATIC) 
+			if(cpBodyGetType(b) == cpBodyType.CP_BODY_TYPE_KINEMATIC) 
 				cpBodyActivate(a);
-			if(cpBodyGetType(a) == CP_BODY_TYPE_KINEMATIC) 
+			if(cpBodyGetType(a) == cpBodyType.CP_BODY_TYPE_KINEMATIC) 
 				cpBodyActivate(b);		
         }
 
@@ -474,7 +474,7 @@ void cpBodySleep(cpBody* body_)
 
 /// Force a body_ to fall asleep immediately along with other bodies in a group.
 void cpBodySleepWithGroup(cpBody* body_, cpBody* group){
-	cpAssertHard(cpBodyGetType(body_) == CP_BODY_TYPE_DYNAMIC, "Non-dynamic bodies cannot be put to sleep.");
+	cpAssertHard(cpBodyGetType(body_) == cpBodyType.CP_BODY_TYPE_DYNAMIC, "Non-dynamic bodies cannot be put to sleep.");
 	
 	cpSpace* space = body_.space;
 	cpAssertHard(!cpSpaceIsLocked(space), "Bodies cannot be put to sleep during a query or a call to cpSpaceStep(). Put these calls into a post-step callback.");

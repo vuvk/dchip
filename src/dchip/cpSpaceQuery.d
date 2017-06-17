@@ -54,23 +54,24 @@ static cpCollisionID NearestPointQuery(PointQueryContext* context, cpShape* shap
 		cpShapePointQuery(shape, context.point, &info);
 		
 		if(info.shape && info.distance < context.maxDistance) 
-			context.func(shape, info.point, info.distance, info.gradient, data);
+			context.func(shape, info.point, info.distance, info.gradient, data); 
 	}
 	
 	return id;
 }
 
 /// Nearest point query callback function type.
-alias cpSpacePointQueryFunc = void function(cpSpace* space, cpVect point, cpFloat maxDistance, cpShapeFilter filter, void* func, void* data);
+//TODO : DELETE alias cpSpacePointQueryFunc = void function(cpSpace* space, cpVect point, cpFloat maxDistance, cpShapeFilter filter, void* func, void* data);
+//TODO : DELETE alias cpSpacePointQueryFunc = void function(cpShape* shape, cpVect point, cpFloat distance, cpVect gradient, void* data);
 /// Query the space at a point and call @c func for each shape found.
 void cpSpacePointQuery(cpSpace* space, cpVect point, cpFloat maxDistance, cpShapeFilter filter, cpSpacePointQueryFunc func, void* data)
 {
-	PointQueryContext context = cpSpacePointQuery(point, maxDistance, filter, func);
+	PointQueryContext context = {point, maxDistance, filter, func};
 	cpBB bb = cpBBNewForCircle(point, cpfmax(maxDistance, 0.0f));
 	
 	cpSpaceLock(space); {
-		cpSpatialIndexQuery(space.dynamicShapes, &context, bb, cast(cpSpatialIndexQueryFunc)NearestPointQuery, data);
-		cpSpatialIndexQuery(space.staticShapes,  &context, bb, cast(cpSpatialIndexQueryFunc)NearestPointQuery, data);
+		cpSpatialIndexQuery(space.dynamicShapes, &context, bb, safeCast!cpSpatialIndexQueryFunc(&NearestPointQuery), data);
+		cpSpatialIndexQuery(space.staticShapes,  &context, bb, safeCast!cpSpatialIndexQueryFunc(&NearestPointQuery), data);
 	} cpSpaceUnlock(space, cpTrue);
 }
 
@@ -91,7 +92,7 @@ static cpCollisionID NearestPointQueryNearest(PointQueryContext* context, cpShap
 /// Query the space at a point and return the nearest shape found. Returns null if no shapes were found.
 cpShape* cpSpacePointQueryNearest(cpSpace* space, cpVect point, cpFloat maxDistance, cpShapeFilter filter, cpPointQueryInfo* out_)
 {
-	cpPointQueryInfo info = cpPointQueryInfo(null, cpvzero, maxDistance, cpvzero);
+	cpPointQueryInfo info = {null, cpvzero, maxDistance, cpvzero};
 	if(out_)
 	{
 		(*out_) = info;
@@ -101,11 +102,11 @@ cpShape* cpSpacePointQueryNearest(cpSpace* space, cpVect point, cpFloat maxDista
 		out_ = &info;
 	}
 	
-	PointQueryContext context = PointQueryContext(point, maxDistance, filter, null);
+	PointQueryContext context = {point, maxDistance, filter, null};
 		
 	cpBB bb = cpBBNewForCircle(point, cpfmax(maxDistance, 0.0f));
-	cpSpatialIndexQuery(space.dynamicShapes, &context, bb, cast(cpSpatialIndexQueryFunc)NearestPointQueryNearest, out_);
-	cpSpatialIndexQuery(space.staticShapes,  &context, bb, cast(cpSpatialIndexQueryFunc)NearestPointQueryNearest, out_);
+	cpSpatialIndexQuery(space.dynamicShapes, &context, bb, safeCast!cpSpatialIndexQueryFunc(&NearestPointQueryNearest), out_);
+	cpSpatialIndexQuery(space.staticShapes,  &context, bb, safeCast!cpSpatialIndexQueryFunc(&NearestPointQueryNearest), out_);
 	
 	return cast(cpShape*)(out_.shape);
 }
@@ -134,15 +135,15 @@ static cpFloat SegmentQuery(SegmentQueryContext* context, cpShape* shape, void* 
 	return 1.0f;
 }
 /// Segment query callback function type.
-alias cpSpaceSegmentQueryFunc = void function(cpSpace* space, cpVect start, cpVect end, cpFloat radius, cpShapeFilter filter, void* func, void* data);
+// TODO : DELETE alias cpSpaceSegmentQueryFunc = void function(cpSpace* space, cpVect start, cpVect end, cpFloat radius, cpShapeFilter filter, void* func, void* data);
 /// Perform a directed line segment query (like a raycast) against the space calling @c func for each shape intersected.
 void cpSpaceSegmentQuery(cpSpace* space, cpVect start, cpVect end, cpFloat radius, cpShapeFilter filter, cpSpaceSegmentQueryFunc func, void* data)
 {
-	SegmentQueryContext context = SegmentQueryContext(start, end, radius, filter, func);
+	SegmentQueryContext context = {start, end, radius, filter, func};
 	
 	cpSpaceLock(space); {
-    	cpSpatialIndexSegmentQuery(space.staticShapes,  &context, start, end, 1.0f, cast(cpSpatialIndexSegmentQueryFunc)SegmentQuery, data);
-    	cpSpatialIndexSegmentQuery(space.dynamicShapes, &context, start, end, 1.0f, cast(cpSpatialIndexSegmentQueryFunc)SegmentQuery, data);
+    	cpSpatialIndexSegmentQuery(space.staticShapes,  &context, start, end, 1.0f, safeCast!cpSpatialIndexSegmentQueryFunc(&SegmentQuery), data);
+    	cpSpatialIndexSegmentQuery(space.dynamicShapes, &context, start, end, 1.0f, safeCast!cpSpatialIndexSegmentQueryFunc(&SegmentQuery), data);
 	} cpSpaceUnlock(space, cpTrue);
 }
 
@@ -163,7 +164,7 @@ static cpFloat SegmentQueryFirst(SegmentQueryContext* context, cpShape* shape, c
 /// Perform a directed line segment query (like a raycast) against the space and return the first shape hit. Returns null if no shapes were hit.
 cpShape* cpSpaceSegmentQueryFirst(cpSpace* space, cpVect start, cpVect end, cpFloat radius, cpShapeFilter filter, cpSegmentQueryInfo* out_)
 {
-	cpSegmentQueryInfo info = cpSegmentQueryInfo(null, end, cpvzero, 1.0f);
+	cpSegmentQueryInfo info = {null, end, cpvzero, 1.0f};
 	if(out_)
 	{
 		(*out_) = info;
@@ -173,10 +174,10 @@ cpShape* cpSpaceSegmentQueryFirst(cpSpace* space, cpVect start, cpVect end, cpFl
 		out_ = &info;
 	}
 	
-	SegmentQueryContext context = SegmentQueryContext(start, end, radius, filter, null);
+	SegmentQueryContext context = {start, end, radius, filter, null};
 	
-	cpSpatialIndexSegmentQuery(space.staticShapes,  &context, start, end, 1.0f, 	  cast(cpSpatialIndexSegmentQueryFunc)SegmentQueryFirst, out_);
-	cpSpatialIndexSegmentQuery(space.dynamicShapes, &context, start, end, out_.alpha, cast(cpSpatialIndexSegmentQueryFunc)SegmentQueryFirst, out_);
+	cpSpatialIndexSegmentQuery(space.staticShapes,  &context, start, end, 1.0f, 	  safeCast!cpSpatialIndexSegmentQueryFunc(&SegmentQueryFirst), out_);
+	cpSpatialIndexSegmentQuery(space.dynamicShapes, &context, start, end, out_.alpha, safeCast!cpSpatialIndexSegmentQueryFunc(&SegmentQueryFirst), out_);
 	
 	return cast(cpShape*)(out_.shape);
 }
@@ -202,16 +203,17 @@ static cpCollisionID BBQuery(BBQueryContext* context, cpShape* shape, cpCollisio
 }
 
 /// Rectangle Query callback function type.
-alias cpSpaceBBQueryFunc = void function(cpSpace* space, cpBB bb, cpShapeFilter filter, void* func, void* data);
+//TODO : DELETE alias cpSpaceBBQueryFunc = void function(cpSpace* space, cpBB bb, cpShapeFilter filter, void* func, void* data);
+//TODO : DELETE alias cpSpaceBBQueryFunc = void function(cpShape* shape, void* data);
 /// Perform a fast rectangle query on the space calling @c func for each shape found.
 /// Only the shape's bounding boxes are checked for overlap, not their full shape.
 void cpSpaceBBQuery(cpSpace* space, cpBB bb, cpShapeFilter filter, cpSpaceBBQueryFunc func, void* data)
 {
-	BBQueryContext context = BBQueryContext(bb, filter, func);
+	BBQueryContext context = {bb, filter, func};
 	
 	cpSpaceLock(space); {
-    	cpSpatialIndexQuery(space.dynamicShapes, &context, bb, cast(cpSpatialIndexQueryFunc)BBQuery, data);
-    	cpSpatialIndexQuery(space.staticShapes,  &context, bb, cast(cpSpatialIndexQueryFunc)BBQuery, data);
+    	cpSpatialIndexQuery(space.dynamicShapes, &context, bb, safeCast!cpSpatialIndexQueryFunc(&BBQuery), data);
+    	cpSpatialIndexQuery(space.staticShapes,  &context, bb, safeCast!cpSpatialIndexQueryFunc(&BBQuery), data);
 	} cpSpaceUnlock(space, cpTrue);
 }
 
@@ -242,7 +244,7 @@ static cpCollisionID ShapeQuery(cpShape* a, cpShape* b, cpCollisionID id, ShapeQ
 }
 
 /// Shape query callback function type.
-alias cpSpaceShapeQueryFunc = void function(cpSpace* space, cpShape* shape, void* func, void* data);
+//TODO : DELETE alias cpSpaceShapeQueryFunc = void function(cpSpace* space, cpShape* shape, void* func, void* data);
 /// Query a space for any shapes overlapping the given shape and call @c func for each shape found.
 cpBool cpSpaceShapeQuery(cpSpace* space, cpShape* shape, cpSpaceShapeQueryFunc func, void* data)
 {
@@ -250,11 +252,11 @@ cpBool cpSpaceShapeQuery(cpSpace* space, cpShape* shape, cpSpaceShapeQueryFunc f
 	cpBB bb = (body_ ? 
 				cpShapeUpdate(shape, body_.transform) : 
 				shape.bb);
-	ShapeQueryContext context = ShapeQueryContext(func, data, cpFalse);
+	ShapeQueryContext context = {func, data, cpFalse};
 	
 	cpSpaceLock(space); {
-    	cpSpatialIndexQuery(space.dynamicShapes, shape, bb, cast(cpSpatialIndexQueryFunc)ShapeQuery, &context);
-    	cpSpatialIndexQuery(space.staticShapes,  shape, bb, cast(cpSpatialIndexQueryFunc)ShapeQuery, &context);
+    	cpSpatialIndexQuery(space.dynamicShapes, shape, bb, safeCast!cpSpatialIndexQueryFunc(&ShapeQuery), &context);
+    	cpSpatialIndexQuery(space.staticShapes,  shape, bb, safeCast!cpSpatialIndexQueryFunc(&ShapeQuery), &context);
 	} cpSpaceUnlock(space, cpTrue);
 	
 	return context.anyCollision;

@@ -58,8 +58,6 @@ void PostStepDoNothing(cpSpace* space, void* obj, void* data)
 {
 }
 
-/// Post Step callback function type.
-alias cpPostStepFunc = void function(cpSpace* space, void* key, void* data);
 /// Schedule a post-step callback to be called when cpSpaceStep() finishes.
 /// You can only register one callback per unique value for @c key.
 /// Returns true only if @c key has never been scheduled before.
@@ -383,26 +381,26 @@ cpCollisionID cpSpaceCollideShapes(cpShape* a, cpShape* b, cpCollisionID id, cpS
 	
 	// Get an arbiter from space.arbiterSet for the two shapes.
 	// This is where the persistant contact magic comes from.
-	cpShape*[] shape_pair = {info.a, info.b};
+	cpShape*[] shape_pair = [info.a, info.b];
 	cpHashValue arbHashID = CP_HASH_PAIR(cast(cpHashValue)info.a, cast(cpHashValue)info.b);
-	cpArbiter* arb = cast(cpArbiter*)cpHashSetInsert(space.cachedArbiters, arbHashID, shape_pair, safeCast!cpHashSetTransFunc(cpSpaceArbiterSetTrans), space);
+	cpArbiter* arb = cast(cpArbiter*)cpHashSetInsert(space.cachedArbiters, arbHashID, cast(cpShape*)shape_pair, safeCast!cpHashSetTransFunc(&cpSpaceArbiterSetTrans), space);
 	cpArbiterUpdate(arb, &info, space);
 	
 	cpCollisionHandler* handler = arb.handler;
 	
 	// Call the begin function first if it's the first step
-	if(arb.state == CP_ARBITER_STATE_FIRST_COLLISION && !handler.beginFunc(arb, space, handler.userData))
+	if(arb.state == cpArbiterState.CP_ARBITER_STATE_FIRST_COLLISION && !handler.beginFunc(arb, space, handler.userData))
 	{
 		cpArbiterIgnore(arb); // permanently ignore the collision until separation
 	}
 	
 	if(
 		// Ignore the arbiter if it has been flagged
-		(arb.state != CP_ARBITER_STATE_IGNORE) && 
+		(arb.state != cpArbiterState.CP_ARBITER_STATE_IGNORE) && 
 		// Call preSolve
 		handler.preSolveFunc(arb, space, handler.userData) &&
 		// Check (again) in case the pre-solve() callback called cpArbiterIgnored().
-		arb.state != CP_ARBITER_STATE_IGNORE &&
+		arb.state != cpArbiterState.CP_ARBITER_STATE_IGNORE &&
 		// Process, but don't add collisions for sensors.
 		!(a.sensor || b.sensor) &&
 		// Don't process collisions between two infinite mass bodies.
@@ -421,8 +419,8 @@ cpCollisionID cpSpaceCollideShapes(cpShape* a, cpShape* b, cpCollisionID id, cpS
 		
 		// Normally arbiters are set as used after calling the post-solve callback.
 		// However, post-solve() callbacks are not called for sensors or arbiters rejected from pre-solve.
-		if(arb.state != CP_ARBITER_STATE_IGNORE) 
-			arb.state = CP_ARBITER_STATE_NORMAL;
+		if(arb.state != cpArbiterState.CP_ARBITER_STATE_IGNORE) 
+			arb.state = cpArbiterState.CP_ARBITER_STATE_NORMAL;
 	}
 	
 	// Time stamp the arbiter so we know it was used recently.
@@ -447,8 +445,8 @@ cpBool cpSpaceArbiterSetFilter(cpArbiter* arb, cpSpace* space)
         (cpBodyIsStatic(b) || cpBodyIsSleeping(b))
         )*/
 	if(
-		(cpBodyGetType(a) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(a)) &&
-		(cpBodyGetType(b) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(b))
+		(cpBodyGetType(a) == cpBodyType.CP_BODY_TYPE_STATIC || cpBodyIsSleeping(a)) &&
+		(cpBodyGetType(b) == cpBodyType.CP_BODY_TYPE_STATIC || cpBodyIsSleeping(b))
 	)
     {
         return cpTrue;
@@ -461,9 +459,9 @@ cpBool cpSpaceArbiterSetFilter(cpArbiter* arb, cpSpace* space)
         arb.state = cpArbiterStateCached;
         cpArbiterCallSeparate(arb, space);
     }*/
-	if(ticks >= 1 && arb.state != CP_ARBITER_STATE_CACHED)
+	if(ticks >= 1 && arb.state != cpArbiterState.CP_ARBITER_STATE_CACHED)
 	{
-		arb.state = CP_ARBITER_STATE_CACHED;
+		arb.state = cpArbiterState.CP_ARBITER_STATE_CACHED;
 		cpCollisionHandler* handler = arb.handler;
 		handler.separateFunc(arb, space, handler.userData);
 	}
@@ -515,7 +513,7 @@ void cpSpaceStep(cpSpace* space, cpFloat dt)
         cpArbiter* arb = cast(cpArbiter*)arbiters.arr[i];
         /* TODO : DELETE
 		arb.state = cpArbiterStateNormal;*/
-		arb.state = CP_ARBITER_STATE_NORMAL;
+		arb.state = cpArbiterState.CP_ARBITER_STATE_NORMAL;
 
         // If both bodies are awake, unthread the arbiter from the contact graph.
         if (!cpBodyIsSleeping(arb.body_a) && !cpBodyIsSleeping(arb.body_b))
@@ -632,7 +630,7 @@ void cpSpaceStep(cpSpace* space, cpFloat dt)
             cpCollisionHandler* handler = arb.handler;
             /* TODO : DELETE
 			handler.postSolve(arb, space, handler.data);*/
-            handler.postSolve(arb, space, handler.userData);
+            handler.postSolveFunc(arb, space, handler.userData);
         }
     }
     cpSpaceUnlock(space, cpTrue);

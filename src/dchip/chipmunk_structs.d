@@ -29,10 +29,13 @@ import std.string;
 import dchip.chipmunk;
 import dchip.chipmunk_types;
 
-import dchip.cpSpace;
+import dchip.cpSpace;
+
 import dchip.cpSpaceStep;
 import dchip.cpShape;
-
+
+
+
 import dchip.cpBody;
 import dchip.cpHashSet;
 import dchip.cpSpatialIndex;
@@ -43,7 +46,14 @@ struct cpArray
 {
 	int num, max;
 	void** arr;
-};
+}
+
+struct sleeping_s
+{
+	cpBody* root;
+	cpBody* next;
+	cpFloat idleTime;
+}
 
 struct cpBody 
 {
@@ -87,12 +97,7 @@ struct cpBody
 	cpArbiter* arbiterList;
 	cpConstraint* constraintList;
 	
-	struct sleeping
-	{
-		cpBody* root;
-		cpBody* next;
-		cpFloat idleTime;
-	}
+	sleeping_s sleeping;
 }
 
 enum cpArbiterState
@@ -336,7 +341,8 @@ struct cpConstraint
     cpDataPointer userData;
 }
 
-struct cpPinJoint {
+struct cpPinJoint 
+{
 	cpConstraint constraint;
 	cpVect anchorA, anchorB;
 	cpFloat dist = 0;
