@@ -298,7 +298,7 @@ version(TIME_TRIAL){}else
             cpShape *shape = cpSpacePointQueryFirst(space, point, GRABABLE_MASK_BIT, CP_NO_GROUP);
             if(shape){
                 cpBody *body_ = shape.body_;
-                mouseJoint = cpPivotJointNew2(mouseBody, body_, cpvzero, cpBodyWorld2Local(body_, point));
+                mouseJoint = cpPivotJointNew2(mouseBody, body_, cpvzero, cpBodyWorldToLocal(body_, point));
                 mouseJoint.maxForce = 50000.0f;
                 mouseJoint.errorBias = 0.15f;
                 cpSpaceAddConstraint(space, mouseJoint);

@@ -35,10 +35,18 @@ struct cpBB
 /// Convenience constructor for cpBB structs.
 alias cpBBNew = cpBB;
 
+/// Constructs a cpBB centered on a point with the given extents (half sizes).
+static cpBB cpBBNewForExtents(const cpVect c, const cpFloat hw, const cpFloat hh)
+{
+	return cpBBNew(c.x - hw, c.y - hh, c.x + hw, c.y + hh);
+}   
+
 /// Constructs a cpBB for a circle with the given position and radius.
 cpBB cpBBNewForCircle(const cpVect p, const cpFloat r)
 {
-    return cpBBNew(p.x - r, p.y - r, p.x + r, p.y + r);
+	/* TODO : DELETE
+    return cpBBNew(p.x - r, p.y - r, p.x + r, p.y + r);*/
+	return cpBBNewForExtents(p, r, r);       
 }
 
 /// Returns true if @c a and @c b intersect.
@@ -100,7 +108,7 @@ cpFloat cpBBMergedArea(cpBB a, cpBB b)
 }
 
 /// Returns the fraction along the segment query the cpBB is hit. Returns INFINITY if it doesn't hit.
-cpFloat cpBBSegmentQuery(cpBB bb, cpVect a, cpVect b)
+/* TODO : DELETEcpFloat cpBBSegmentQuery(cpBB bb, cpVect a, cpVect b)
 {
     cpFloat idx   = 1.0f / (b.x - a.x);
     cpFloat tx1   = (bb.l == a.x ? -INFINITY : (bb.l - a.x) * idx);
@@ -124,6 +132,44 @@ cpFloat cpBBSegmentQuery(cpBB bb, cpVect a, cpVect b)
     }
 
     return INFINITY;
+}*/
+static cpFloat cpBBSegmentQuery(cpBB bb, cpVect a, cpVect b)
+{
+	cpVect delta = cpvsub(b, a);
+	cpFloat tmin = -INFINITY, tmax = INFINITY;
+	
+	if(delta.x == 0.0f)
+	{
+		if(a.x < bb.l || bb.r < a.x) return INFINITY;
+	}
+	else 
+	{
+		cpFloat t1 = (bb.l - a.x)/delta.x;
+		cpFloat t2 = (bb.r - a.x)/delta.x;
+		tmin = cpfmax(tmin, cpfmin(t1, t2));
+		tmax = cpfmin(tmax, cpfmax(t1, t2));
+	}
+	
+	if(delta.y == 0.0f)
+	{
+		if(a.y < bb.b || bb.t < a.y) return INFINITY;
+	} 
+	else 
+	{
+		cpFloat t1 = (bb.b - a.y)/delta.y;
+		cpFloat t2 = (bb.t - a.y)/delta.y;
+		tmin = cpfmax(tmin, cpfmin(t1, t2));
+		tmax = cpfmin(tmax, cpfmax(t1, t2));
+	}
+	
+	if(tmin <= tmax && 0.0f <= tmax && tmin <= 1.0f)
+	{
+		return cpfmax(tmin, 0.0f);
+	} 
+	else 
+	{
+		return INFINITY;
+	}
 }
 
 /// Return true if the bounding box intersects the line segment with ends @c a and @c b.
@@ -142,13 +188,24 @@ cpVect cpBBClampVect(const cpBB bb, const cpVect v)
 /// Wrap a vector to a bounding box.
 cpVect cpBBWrapVect(const cpBB bb, const cpVect v)
 {
-    cpFloat ix   = cpfabs(bb.r - bb.l);
-    cpFloat modx = cpfmod(v.x - bb.l, ix);
-    cpFloat x    = (modx > 0.0f) ? modx : modx + ix;
+    cpFloat dx   = cpfabs(bb.r - bb.l);
+    cpFloat modx = cpfmod(v.x - bb.l, dx);
+    cpFloat x    = (modx > 0.0f) ? modx : modx + dx;
 
-    cpFloat iy   = cpfabs(bb.t - bb.b);
-    cpFloat mody = cpfmod(v.y - bb.b, iy);
-    cpFloat y    = (mody > 0.0f) ? mody : mody + iy;
+    cpFloat dy   = cpfabs(bb.t - bb.b);
+    cpFloat mody = cpfmod(v.y - bb.b, dy);
+    cpFloat y    = (mody > 0.0f) ? mody : mody + dy;
 
     return cpv(x + bb.l, y + bb.b);
 }
+
+/// Returns a bounding box offseted by @c v.
+static cpBB cpBBOffset(const cpBB bb, const cpVect v)
+{
+	return cpBBNew(
+		bb.l + v.x,
+		bb.b + v.y,
+		bb.r + v.x,
+		bb.t + v.y
+	);
+} 

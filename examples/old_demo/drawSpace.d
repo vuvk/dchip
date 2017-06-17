@@ -71,7 +71,7 @@ glColor_for_shape(cpShape *shape, cpSpace *space)
             GLfloat v = 0.2f;
             glColor3f(v,v,v);
             return;
-        } else if(body_.node.idleTime > space.sleepTimeThreshold) {
+        } else if(body_.sleeping.idleTime > space.sleepTimeThreshold) {
             GLfloat v = 0.66f;
             glColor3f(v,v,v);
             return;
@@ -203,7 +203,10 @@ drawSegmentShape(cpBody *body_, cpSegmentShape *seg, cpSpace *space)
 static void
 drawPolyShape(cpBody *body_, cpPolyShape *poly, cpSpace *space)
 {
-    int count = poly.numVerts;
+	/* TODO : DELETE
+    int count = poly.numVerts;*/
+	int count = poly.count;
+	
 version(CP_USE_DOUBLES)
 {
     glVertexPointer(2, GL_DOUBLE, 0, poly.tVerts);
@@ -264,8 +267,11 @@ enum int springVAR_count = springVAR.length / 2;
 static void
 drawSpring(cpDampedSpring *spring, cpBody *body_a, cpBody *body_b)
 {
+	/* TODO : DELETE
     cpVect a = cpvadd(body_a.p, cpvrotate(spring.anchorA, body_a.rot));
-    cpVect b = cpvadd(body_b.p, cpvrotate(spring.anchorB, body_b.rot));
+    cpVect b = cpvadd(body_b.p, cpvrotate(spring.anchorB, body_b.rot));*/	
+	cpVect a = cpTransformVect(body_a.transform, cpvsub(spring.anchorA, body_a.cog));
+	cpVect b = cpTransformVect(body_b.transform, cpvsub(spring.anchorB, body_b.cog));	
 
     glPointSize(5.0f);
     glBegin(GL_POINTS); {
@@ -304,9 +310,12 @@ drawConstraint(cpConstraint *constraint)
     const cpConstraintClass *klass = constraint.klass;
     if (cpConstraintIsPinJoint (constraint)) {
         cpPinJoint *joint = cast(cpPinJoint *)constraint;
-
+	
+		/* TODO : DELETE
         cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchorA, body_a.rot));
-        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
+        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));*/
+		cpVect a = cpTransformVect(body_a.transform, cpvsub(joint.anchorA, body_a.cog));
+		cpVect b = cpTransformVect(body_b.transform, cpvsub(joint.anchorB, body_b.cog));	
 
         glPointSize(5.0f);
         glBegin(GL_POINTS); {
@@ -321,8 +330,11 @@ drawConstraint(cpConstraint *constraint)
 	} else if (cpConstraintIsSlideJoint (constraint)) {
         cpSlideJoint *joint = cast(cpSlideJoint *)constraint;
 
+		/* TODO : DELETE
         cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchorA, body_a.rot));
-        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
+        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));*/
+		cpVect a = cpTransformVect(body_a.transform, cpvsub(joint.anchorA, body_a.cog));
+		cpVect b = cpTransformVect(body_b.transform, cpvsub(joint.anchorB, body_b.cog));
 
         glPointSize(5.0f);
         glBegin(GL_POINTS); {
@@ -337,8 +349,11 @@ drawConstraint(cpConstraint *constraint)
 	} else if (cpConstraintIsPivotJoint (constraint)){
         cpPivotJoint *joint = cast(cpPivotJoint *)constraint;
 
+		/* TODO : DELETE
         cpVect a = cpvadd(body_a.p, cpvrotate(joint.anchorA, body_a.rot));
-        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
+        cpVect b = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));*/
+		cpVect a = cpTransformVect(body_a.transform, cpvsub(joint.anchorA, body_a.cog));
+		cpVect b = cpTransformVect(body_b.transform, cpvsub(joint.anchorB, body_b.cog));
 
         glPointSize(10.0f);
         glBegin(GL_POINTS); {
@@ -348,9 +363,13 @@ drawConstraint(cpConstraint *constraint)
     } else if(cpConstraintIsGrooveJoint(constraint)) {
         cpGrooveJoint *joint = cast(cpGrooveJoint *)constraint;
 
+		/* TODO : DELETE
         cpVect a = cpvadd(body_a.p, cpvrotate(joint.grv_a, body_a.rot));
         cpVect b = cpvadd(body_a.p, cpvrotate(joint.grv_b, body_a.rot));
-        cpVect c = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));
+        cpVect c = cpvadd(body_b.p, cpvrotate(joint.anchorB, body_b.rot));*/
+		cpVect a = cpTransformPoint(body_a.transform, joint.grv_a);
+		cpVect b = cpTransformPoint(body_a.transform, joint.grv_b);
+		cpVect c = cpTransformVect(body_b.transform, cpvsub(joint.anchorB, body_b.cog));
 
         glPointSize(5.0f);
         glBegin(GL_POINTS); {
