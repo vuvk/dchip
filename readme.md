@@ -4,7 +4,7 @@
 
 This is a D2 port of the [Chipmunk2D](http://chipmunk2d.net/) game physics library.
 
-Currently DChip targets Chimpunk2D version **6.2.1**.
+Currently DChip targets Chimpunk2D version **7.0.1**.
 
 DChip is a platform-independent library with no dependencies.
 
@@ -41,7 +41,7 @@ and [Howling Moon Software], and were ported to D by [Andrej Mitrovic].
 
 ## Compiler Version Compatibility
 
-Currently DMD v2.065 (or any other compiler based on the same fronted) is required.
+Currently DMD v2.074.0 (or any other compiler based on the same fronted) is required.
 
 ## Building
 
@@ -182,7 +182,7 @@ before manipulating internal fields.
 
 - Chipmunk2D [homepage](http://chipmunk2d.net/).
 - Chipmunk2D [github page](https://github.com/slembcke/Chipmunk2D).
-- Chipmunk2D [v6.2.1 documentation](http://chipmunk-physics.net/release/Chipmunk-6.x/Chipmunk-6.2.1-Docs/).
+- Chipmunk2D [v7.0.1 documentation](http://chipmunk-physics.net/release/Chipmunk-7.x/Chipmunk-7.0.1-Docs/).
 
 ## License
 

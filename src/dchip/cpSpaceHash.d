@@ -603,8 +603,26 @@ int cpSpaceHashContains(cpSpaceHash* hash, void* obj, cpHashValue hashid)
     return cpHashSetFind(hash.handleSet, hashid, obj) != null;
 }
 
-__gshared cpSpatialIndexClass klass;
+__gshared cpSpatialIndexClass klass = cpSpatialIndexClass(
+        safeCast!cpSpatialIndexDestroyImpl(&cpSpaceHashDestroy),
 
+        safeCast!cpSpatialIndexCountImpl(&cpSpaceHashCount),
+        safeCast!cpSpatialIndexEachImpl(&cpSpaceHashEach),
+        //safeCast!cpSpatialIndexContainsImpl(&cpSpaceHashContains),
+        cast(cpSpatialIndexContainsImpl)&cpSpaceHashContains,
+
+        safeCast!cpSpatialIndexInsertImpl(&cpSpaceHashInsert),
+        safeCast!cpSpatialIndexRemoveImpl(&cpSpaceHashRemove),
+
+        safeCast!cpSpatialIndexReindexImpl(&cpSpaceHashRehash),
+        safeCast!cpSpatialIndexReindexObjectImpl(&cpSpaceHashRehashObject),
+        safeCast!cpSpatialIndexReindexQueryImpl(&cpSpaceHashReindexQuery),
+
+        safeCast!cpSpatialIndexQueryImpl(&cpSpaceHashQuery),
+        safeCast!cpSpatialIndexSegmentQueryImpl(&cpSpaceHashSegmentQuery),
+    );
+
+/+ TODO : DELETE
 void _initModuleCtor_cpSpaceHash()
 {
     klass = cpSpatialIndexClass(
@@ -624,7 +642,7 @@ void _initModuleCtor_cpSpaceHash()
         cast(cpSpatialIndexQueryImpl)&cpSpaceHashQuery,
         cast(cpSpatialIndexSegmentQueryImpl)&cpSpaceHashSegmentQuery,
     );
-}
+}+/
 
 cpSpatialIndexClass* Klass()
 {

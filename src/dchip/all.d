@@ -26,7 +26,7 @@ public
     import dchip.chipmunk;
     import dchip.chipmunk_private;
     import dchip.chipmunk_types;
-	import dchip.chipmunk_structs;
+    import dchip.chipmunk_structs;
     import dchip.constraints_util;
     import dchip.cpArbiter;
     import dchip.cpArray;
@@ -40,9 +40,11 @@ public
     import dchip.cpGearJoint;
     import dchip.cpGrooveJoint;
     import dchip.cpHashSet;
+    import dchip.cpMarch;
     import dchip.cpPinJoint;
     import dchip.cpPivotJoint;
     import dchip.cpPolyShape;
+    import dchip.cpPolyLine;
     import dchip.cpRatchetJoint;
     import dchip.cpRotaryLimitJoint;
     import dchip.cpShape;
@@ -50,14 +52,15 @@ public
     import dchip.cpSlideJoint;
     import dchip.cpSpace;
     import dchip.cpSpaceComponent;
+    import dchip.cpSpaceDebug;
     import dchip.cpSpaceHash;
     import dchip.cpSpaceQuery;
     import dchip.cpSpaceStep;
     import dchip.cpSpatialIndex;
     import dchip.cpSweep1D;
-	import dchip.cpRobust;
+    import dchip.cpRobust;
     import dchip.cpVect;
-	import dchip.cpTransform;
+    import dchip.cpTransform;
     import dchip.prime;
     import dchip.util;
 }

@@ -35,7 +35,8 @@ import dchip.cpSpatialIndex;
 import dchip.util;
 
 /** Workaround for cycles between module constructors. */
-shared static this()
+/+ TODO : DELETE
+ + shared static this()
 {
     import dchip.cpBBTree;
     import dchip.cpCollision;
@@ -55,8 +56,8 @@ shared static this()
     import dchip.cpSpaceHash;
     import dchip.cpSweep1D;
 
-    _initModuleCtor_cpBBTree();
-    _initModuleCtor_cpCollision();    
+    //_initModuleCtor_cpBBTree();
+    //_initModuleCtor_cpCollision();    
 
 	// TODO : DELETE
     //_initModuleCtor_cpDampedRotarySpring();
@@ -76,10 +77,10 @@ shared static this()
 	// TODO : DELETE
     //_initModuleCtor_cpSimpleMotor();
     //_initModuleCtor_cpSlideJoint();
-    _initModuleCtor_cpSpaceHash();
+    //_initModuleCtor_cpSpaceHash();
     // TODO : DELETE
     //_initModuleCtor_cpSweep1D();
-}
+}+/
 
 static cpVect cpClosetPointOnSegment(const cpVect p, const cpVect a, const cpVect b)
 {
@@ -256,17 +257,18 @@ alias cprealloc = realloc;
 /// Chipmunk free() alias.
 alias cpfree = free;
 
-/// Chipmunk 6.2.1
-enum CP_VERSION_MAJOR = 6;
-enum CP_VERSION_MINOR = 2;
+/// Chipmunk 7.0.1
+enum CP_VERSION_MAJOR = 7;
+enum CP_VERSION_MINOR = 0;
 enum CP_VERSION_RELEASE = 1;
 
 /// Version string.
 enum cpVersionString = format("%s.%s.%s", CP_VERSION_MAJOR, CP_VERSION_MINOR, CP_VERSION_RELEASE);
 
+/+ TODO : DELETE
 /// @deprecated
 deprecated("cpInitChipmunk is deprecated and no longer required. It will be removed in the future.")
-void cpInitChipmunk() { }
+void cpInitChipmunk() { }+/
 
 /// Calculate the moment of inertia for a circle.
 /// @c r1 and @c r2 are the inner and outer diameters. A solid circle has an inner diameter of 0.
@@ -279,7 +281,9 @@ cpFloat cpMomentForCircle(cpFloat m, cpFloat r1, cpFloat r2, cpVect offset)
 /// @c r1 and @c r2 are the inner and outer diameters. A solid circle has an inner diameter of 0.
 cpFloat cpAreaForCircle(cpFloat r1, cpFloat r2)
 {
-    return safeCast!cpFloat(M_PI) * cpfabs(r1 * r1 - r2 * r2);
+	/+ TODO : DELETE
+    return safeCast!cpFloat(M_PI) * cpfabs(r1 * r1 - r2 * r2); +/
+	return cast(cpFloat)CP_PI * cpfabs(r1 * r1 - r2 * r2);   
 }
 
 /// Calculate the moment of inertia for a line segment.
@@ -296,7 +300,9 @@ cpFloat cpMomentForSegment(cpFloat m, cpVect a, cpVect b, cpFloat r)
 /// Calculate the area of a fattened (capsule shaped) line segment.
 cpFloat cpAreaForSegment(cpVect a, cpVect b, cpFloat r)
 {
-    return r * (safeCast!cpFloat(M_PI) * r + 2.0f * cpvdist(a, b));
+	/+ TODO : DELETE
+    return r * (safeCast!cpFloat(M_PI) * r + 2.0f * cpvdist(a, b));+/
+	return r * (cast(cpFloat)CP_PI * r + 2.0f * cpvdist(a, b));     
 }
 
 /// Calculate the moment of inertia for a solid polygon shape assuming it's center of gravity is at it's centroid. The offset is added to each vertex.
@@ -348,6 +354,7 @@ cpFloat cpMomentForPoly(cpFloat m, const int count, const cpVect* verts, cpVect 
 
 /// Calculate the signed area of a polygon. A Clockwise winding gives positive area.
 /// This is probably backwards from what you expect, but matches Chipmunk's the winding for poly shapes.
+/+ TODO : DELETE
 cpFloat cpAreaForPoly(const int count, const cpVect* verts, cpFloat r)
 {
 	cpFloat area = 0.0f;
@@ -362,7 +369,22 @@ cpFloat cpAreaForPoly(const int count, const cpVect* verts, cpFloat r)
 	}
 	
 	return r*(CP_PI*cpfabs(r) + perimeter) + area/2.0f;
-}
+}+/
+cpFloat cpAreaForPoly(const int count, const cpVect* verts, cpFloat r)
+{
+	cpFloat area = 0.0f;
+	cpFloat perimeter = 0.0f;
+	for(int i=0; i<count; i++)
+	{
+		cpVect v1 = verts[i];
+		cpVect v2 = verts[(i+1)%count];
+		
+		area += cpvcross(v1, v2);
+		perimeter += cpvdist(v1, v2);
+	}
+	
+	return r*(CP_PI*cpfabs(r) + perimeter) + area/2.0f;
+}    
 
 void cpLoopIndexes(cpVect* verts, int count, int* start, int* end)
 {
@@ -410,7 +432,9 @@ int QHullPartition(cpVect* verts, int count, cpVect a, cpVect b, cpFloat tol)
 
     for (int tail = count - 1; head <= tail; )
     {
-        cpFloat value = cpvcross(delta, cpvsub(verts[head], a));
+		/* TODO : DELETE
+        cpFloat value = cpvcross(delta, cpvsub(verts[head], a));*/
+		cpFloat value = cpvcross(cpvsub(verts[head], a), delta);    
 
         if (value > valueTol)
         {
@@ -459,15 +483,17 @@ int QHullReduce(cpFloat tol, cpVect* verts, int count, cpVect a, cpVect pivot, c
 }
 
 /// Calculate the natural centroid of a polygon.
-cpVect cpCentroidForPoly(const int numVerts, const cpVect* verts)
+/* TODO : DELETE
+cpVect cpCentroidForPoly(const int numVerts, const cpVect* verts)*/
+cpVect cpCentroidForPoly(const int count, const cpVect* verts)     
 {
     cpFloat sum  = 0.0f;
     cpVect  vsum = cpvzero;
 
-    for (int i = 0; i < numVerts; i++)
+    for (int i = 0; i < count; i++)
     {
         cpVect  v1    = verts[i];
-        cpVect  v2    = verts[(i + 1) % numVerts];
+        cpVect  v2    = verts[(i + 1) % count];
         cpFloat cross = cpvcross(v1, v2);
 
         sum += cross;
@@ -478,15 +504,15 @@ cpVect cpCentroidForPoly(const int numVerts, const cpVect* verts)
 }
 
 /// Center the polygon on the origin. (Subtracts the centroid of the polygon from each vertex)
-void cpRecenterPoly(const int numVerts, cpVect* verts)
-{
-    cpVect centroid = cpCentroidForPoly(numVerts, verts);
-
-    for (int i = 0; i < numVerts; i++)
-    {
-        verts[i] = cpvsub(verts[i], centroid);
-    }
-}
+//void cpRecenterPoly(const int numVerts, cpVect* verts)
+//{
+//    cpVect centroid = cpCentroidForPoly(numVerts, verts);
+//
+//    for (int i = 0; i < numVerts; i++)
+//    {
+//        verts[i] = cpvsub(verts[i], centroid);
+//    }
+//}
 
 /// Calculate the moment of inertia for a solid box.
 cpFloat cpMomentForBox(cpFloat m, cpFloat width, cpFloat height)
@@ -513,6 +539,7 @@ cpFloat cpMomentForBox2(cpFloat m, cpBB box)
 /// My implementation performs an in place reduction using the result array as scratch space.
 int cpConvexHull(int count, cpVect* verts, cpVect* result, int* first, cpFloat tol)
 {
+	/* TODO : DELETE
     if (result)
     {
         // Copy the line vertexes into the empty part of the result polyline to use as a scratch buffer.
@@ -522,7 +549,12 @@ int cpConvexHull(int count, cpVect* verts, cpVect* result, int* first, cpFloat t
     {
         // If a result array was not specified, reduce the input instead.
         result = verts;
-    }
+    }*/
+    if(verts != result)
+    {
+		// Copy the line vertexes into the empty part of the result polyline to use as a scratch buffer.
+		memcpy(result, verts, count*cpVect.sizeof);
+	}    
 
     // Degenerate case, all poins are the same.
     int start, end;
@@ -543,9 +575,12 @@ int cpConvexHull(int count, cpVect* verts, cpVect* result, int* first, cpFloat t
 
     if (first)
         (*first) = start;
+    /+ TODO : DELETE
     int resultCount = QHullReduce(tol, result + 2, count - 2, a, b, a, result + 1) + 1;
     /*cpAssertSoft(cpPolyValidate(result, resultCount),
                  "Internal error: cpConvexHull() and cpPolyValidate() did not agree.\n" ~ 
                  "Please report this error with as much info as you can.");*/
-    return resultCount;
+    return resultCount;+/
+    
+    return QHullReduce(tol, result + 2, count - 2, a, b, a, result + 1) + 1;         
 }

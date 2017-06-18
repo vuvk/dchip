@@ -155,7 +155,7 @@ void IncrementStamp(cpBBTree* tree)
 void PairRecycle(cpBBTree* tree, Pair* pair)
 {
     // Share the pool of the master tree.
-    // TODO would be lovely to move the pairs stuff into an external data structure.
+    // TODO: would be lovely to move the pairs stuff into an external data structure.
     tree = GetMasterTree(tree);
 
     pair.a.next      = tree.pooledPairs;
@@ -165,7 +165,7 @@ void PairRecycle(cpBBTree* tree, Pair* pair)
 Pair* PairFromPool(cpBBTree* tree)
 {
     // Share the pool of the master tree.
-    // TODO would be lovely to move the pairs stuff into an external data structure.
+    // TODO: would be lovely to move the pairs stuff into an external data structure.
     tree = GetMasterTree(tree);
 
     Pair* pair = tree.pooledPairs;
@@ -572,7 +572,7 @@ void MarkSubtree(Node* subtree, MarkContext* context)
     else
     {
         MarkSubtree(subtree.A, context);
-        MarkSubtree(subtree.B, context);         // TODO Force TCO here?
+        MarkSubtree(subtree.B, context);         // TODO: Force TCO here?
     }
 }
 
@@ -812,8 +812,24 @@ void cpBBTreeEach(cpBBTree* tree, cpSpatialIndexIteratorFunc func, void* data)
     cpHashSetEach(tree.leaves, safeCast!cpHashSetIteratorFunc(&each_helper), &context);
 }
 
-__gshared cpSpatialIndexClass klass;
+__gshared cpSpatialIndexClass klass = cpSpatialIndexClass(
+        safeCast!cpSpatialIndexDestroyImpl(&cpBBTreeDestroy),
 
+        safeCast!cpSpatialIndexCountImpl(&cpBBTreeCount),
+        safeCast!cpSpatialIndexEachImpl(&cpBBTreeEach),
+
+        safeCast!cpSpatialIndexContainsImpl(&cpBBTreeContains),
+        safeCast!cpSpatialIndexInsertImpl(&cpBBTreeInsert),
+        safeCast!cpSpatialIndexRemoveImpl(&cpBBTreeRemove),
+
+        safeCast!cpSpatialIndexReindexImpl(&cpBBTreeReindex),
+        safeCast!cpSpatialIndexReindexObjectImpl(&cpBBTreeReindexObject),
+        safeCast!cpSpatialIndexReindexQueryImpl(&cpBBTreeReindexQuery),
+
+        safeCast!cpSpatialIndexQueryImpl(&cpBBTreeQuery),
+        safeCast!cpSpatialIndexSegmentQueryImpl(&cpBBTreeSegmentQuery),
+    );
+/* TODO : DELETE
 void _initModuleCtor_cpBBTree()
 {
     klass = cpSpatialIndexClass(
@@ -833,7 +849,7 @@ void _initModuleCtor_cpBBTree()
         safeCast!cpSpatialIndexQueryImpl(&cpBBTreeQuery),
         safeCast!cpSpatialIndexSegmentQueryImpl(&cpBBTreeSegmentQuery),
     );
-}
+}*/
 
 cpSpatialIndexClass* Klass()
 {

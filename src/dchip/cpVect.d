@@ -31,32 +31,7 @@ immutable cpVect cpvzero = { 0.0f, 0.0f };
 /// Convenience constructor for cpVect structs.
 alias cpv = cpVect;
 
-/// Spherical linearly interpolate between v1 and v2.
-cpVect cpvslerp(const cpVect v1, const cpVect v2, const cpFloat t)
-{
-    cpFloat dot   = cpvdot(cpvnormalize(v1), cpvnormalize(v2));
-    cpFloat omega = cpfacos(cpfclamp(dot, -1.0f, 1.0f));
-
-    if (omega < 1e-3)
-    {
-        // If the angle between two vectors is very small, lerp instead to avoid precision issues.
-        return cpvlerp(v1, v2, t);
-    }
-    else
-    {
-        cpFloat denom = 1.0f / cpfsin(omega);
-        return cpvadd(cpvmult(v1, cpfsin((1.0f - t) * omega) * denom), cpvmult(v2, cpfsin(t * omega) * denom));
-    }
-}
-
-/// Spherical linearly interpolate between v1 towards v2 by no more than angle a radians
-cpVect cpvslerpconst(const cpVect v1, const cpVect v2, const cpFloat a)
-{
-    cpFloat dot   = cpvdot(cpvnormalize(v1), cpvnormalize(v2));
-    cpFloat omega = cpfacos(cpfclamp(dot, -1.0f, 1.0f));
-
-    return cpvslerp(v1, v2, cpfmin(a, omega) / omega);
-}
+/* TODO : DELETE
 
 ///	Returns a string representation of v. Intended mostly for debugging purposes and not production use.
 ///	$(B Note:) The string points to a static local and is reset every time the function is called.
@@ -69,7 +44,7 @@ string cpvstr(const cpVect v)
     static char[256] str;
     sformat(str, "(% .3s, % .3s)", v.x, v.y);
     return assumeUnique(str);
-}
+}*/
 
 /// Check if two vectors are equal. (Be careful when comparing floating point numbers!)
 cpBool cpveql(const cpVect v1, const cpVect v2)
@@ -182,6 +157,33 @@ cpVect cpvnormalize(const cpVect v)
     return cpvmult(v, 1.0f / (cpvlength(v) + CPFLOAT_MIN));
 }
 
+/// Spherical linearly interpolate between v1 and v2.
+cpVect cpvslerp(const cpVect v1, const cpVect v2, const cpFloat t)
+{
+    cpFloat dot   = cpvdot(cpvnormalize(v1), cpvnormalize(v2));
+    cpFloat omega = cpfacos(cpfclamp(dot, -1.0f, 1.0f));
+
+    if (omega < 1e-3)
+    {
+        // If the angle between two vectors is very small, lerp instead to avoid precision issues.
+        return cpvlerp(v1, v2, t);
+    }
+    else
+    {
+        cpFloat denom = 1.0f / cpfsin(omega);
+        return cpvadd(cpvmult(v1, cpfsin((1.0f - t) * omega) * denom), cpvmult(v2, cpfsin(t * omega) * denom));
+    }
+}
+
+/// Spherical linearly interpolate between v1 towards v2 by no more than angle a radians
+cpVect cpvslerpconst(const cpVect v1, const cpVect v2, const cpFloat a)
+{
+    cpFloat dot   = cpvdot(cpvnormalize(v1), cpvnormalize(v2));
+    cpFloat omega = cpfacos(cpfclamp(dot, -1.0f, 1.0f));
+
+    return cpvslerp(v1, v2, cpfmin(a, omega) / omega); 
+}
+
 /// @deprecated Just an alias for cpvnormalize() now.
 cpVect cpvnormalize_safe(const cpVect v)
 {
@@ -221,6 +223,7 @@ cpBool cpvnear(const cpVect v1, const cpVect v2, const cpFloat dist)
 /// 2x2 matrix type used for tensors and such.
 
 /// Create a 2x2 matrix.
+// NUKE      
 cpMat2x2 cpMat2x2New(cpFloat a, cpFloat b, cpFloat c, cpFloat d)
 {
     cpMat2x2 m = { a, b, c, d };

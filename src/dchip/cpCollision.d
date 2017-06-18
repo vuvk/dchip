@@ -1162,10 +1162,27 @@ static void CollisionError(const cpShape* circle, const cpShape* poly, cpCollisi
 }
 
 
-__gshared CollisionFunc[9] BuiltinCollisionFuncs;
-__gshared CollisionFunc* CollisionFuncs;
-/* TODO DELETE
-__gshared CollisionFunc[9] segmentCollisions; */
+__gshared CollisionFunc[9] BuiltinCollisionFuncs = [
+
+		safeCast!CollisionFunc(&CircleToCircle),
+	
+		safeCast!CollisionFunc(&CollisionError),
+		safeCast!CollisionFunc(&CollisionError),
+	
+		safeCast!CollisionFunc(&CircleToSegment),
+		safeCast!CollisionFunc(&SegmentToSegment),
+	
+		safeCast!CollisionFunc(&CollisionError),
+	
+		safeCast!CollisionFunc(&CircleToPoly),
+		safeCast!CollisionFunc(&SegmentToPoly),
+		safeCast!CollisionFunc(&PolyToPoly),
+    ];
+    
+__gshared CollisionFunc* CollisionFuncs = BuiltinCollisionFuncs.ptr;
+
+/+ TODO DELETE
+__gshared CollisionFunc[9] segmentCollisions; 
 
 void _initModuleCtor_cpCollision()
 {
@@ -1200,7 +1217,7 @@ void _initModuleCtor_cpCollision()
         safeCast!CollisionFunc(&SegmentToPoly),
         safeCast!CollisionFunc(&PolyToPoly),
     ];*/
-}
+}+/
 
 /* TODO : DELETE
 void cpEnableSegmentToSegmentCollisions()
