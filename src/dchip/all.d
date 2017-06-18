@@ -44,7 +44,7 @@ public
     import dchip.cpPinJoint;
     import dchip.cpPivotJoint;
     import dchip.cpPolyShape;
-    import dchip.cpPolyLine;
+    import dchip.cpPolyline;
     import dchip.cpRatchetJoint;
     import dchip.cpRotaryLimitJoint;
     import dchip.cpShape;
